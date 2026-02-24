@@ -1,33 +1,31 @@
-import type { AppPage } from '../types/recorder'
+import { NavLink } from 'react-router-dom'
 
-type HeaderProps = {
-  page: AppPage
-  onPageChange: (page: AppPage) => void
-}
-
-export function Header({ page, onPageChange }: HeaderProps) {
+export function Header() {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 mb-6">
       <h1 className="text-2xl font-semibold">Crux</h1>
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => onPageChange('recorder')}
-          className={`rounded-md px-3 py-1 text-sm ${
-            page === 'recorder' ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
-          }`}
+        <NavLink
+          to="/"
+          className={({ isActive }) =>
+            `rounded-md px-3 py-1 text-sm ${
+              isActive ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
+            }`
+          }
+          end
         >
           Recorder
-        </button>
-        <button
-          type="button"
-          onClick={() => onPageChange('settings')}
-          className={`rounded-md px-3 py-1 text-sm ${
-            page === 'settings' ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
-          }`}
+        </NavLink>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `rounded-md px-3 py-1 text-sm ${
+              isActive ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
+            }`
+          }
         >
           Settings
-        </button>
+        </NavLink>
       </div>
     </div>
   )

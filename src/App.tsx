@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { Routes, Route } from 'react-router-dom'
 
 import { Header } from './components/Header'
-import { RecorderView } from './components/RecorderView'
-import { SettingsView } from './components/SettingsView'
+import { RecorderView } from './screens/RecorderView'
+import { SettingsView } from './screens/SettingsView'
 import { useGameStatus } from './hooks/useGameStatus'
 import { useLeagueRecorder } from './hooks/useLeagueRecorder'
 import { useRecorderSettings } from './hooks/useRecorderSettings'
-import type { AppPage } from './types/recorder'
 
 function App() {
-  const [page, setPage] = useState<AppPage>('recorder')
   const gameActive = useGameStatus()
   const { settings, setSettings } = useRecorderSettings()
   const { recordingState, elapsedSeconds, lastSavedPath, errorMessage, startRecording, stopRecording } =
@@ -28,22 +27,29 @@ function App() {
 
   return (
     <main className="min-h-screen w-full bg-zinc-950 p-6 text-zinc-100">
-      <Header page={page} onPageChange={setPage} />
+      <Header />
 
-      {page === 'recorder' && (
-        <RecorderView
-          gameActive={gameActive}
-          recordingState={recordingState}
-          elapsedSeconds={elapsedSeconds}
-          lastSavedPath={lastSavedPath}
-          errorMessage={errorMessage}
-          settingsSummary={settingsSummary}
+      <Routes>
+        <Route 
+          path="/" 
+          element={
+            <RecorderView
+              gameActive={gameActive}
+              recordingState={recordingState}
+              elapsedSeconds={elapsedSeconds}
+              lastSavedPath={lastSavedPath}
+              errorMessage={errorMessage}
+              settingsSummary={settingsSummary}
+            />
+          } 
         />
-      )}
-
-      {page === 'settings' && (
-        <SettingsView settings={settings} onSettingsChange={setSettings} />
-      )}
+        <Route 
+          path="/settings" 
+          element={
+            <SettingsView settings={settings} onSettingsChange={setSettings} />
+          } 
+        />
+      </Routes>
     </main>
   )
 }

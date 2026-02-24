@@ -9,6 +9,13 @@ type DesktopSource = {
   name: string
 }
 
+type RecordingSession = {
+  filename: string
+  path: string
+  size: number
+  createdAt: number
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   onGameStatus(listener: (payload: GameStatusPayload) => void) {
     const wrappedListener = (_event: Electron.IpcRendererEvent, payload: GameStatusPayload) => {
@@ -25,5 +32,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   saveRecording(recordingBuffer: ArrayBuffer) {
     return ipcRenderer.invoke('save-recording', recordingBuffer) as Promise<string>
+  },
+  getRecordings() {
+    return ipcRenderer.invoke('get-recordings') as Promise<RecordingSession[]>
+  },
+  deleteRecording(filePath: string) {
+    return ipcRenderer.invoke('delete-recording', filePath) as Promise<boolean>
   },
 })

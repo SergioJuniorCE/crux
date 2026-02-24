@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol, net } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -80,6 +80,9 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(() => {
+  protocol.handle('crux', (request) => {
+    return net.fetch('file://' + request.url.slice('crux://'.length))
+  })
   registerIpcHandlers()
   gamePoller.start()
   createWindow()

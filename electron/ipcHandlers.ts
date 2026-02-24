@@ -29,4 +29,42 @@ export function registerIpcHandlers() {
 
     return filePath
   })
+
+  ipcMain.handle('get-recordings', async () => {
+    const recordingsDir = path.join(app.getPath('videos'), 'CruxRecordings')
+    
+    try {
+      await fs.access(recordingsDir)
+    } catch {
+      return []
+    }
+
+    const files = await fs.readdir(recordingsDir)
+    const recordings = await Promise.all(
+      files
+        .filter((file) => file.endsWith('.webm'))
+        .map(async (file) => {
+          const filePath = path.join(recordingsDir, file)
+          const stats = await fs.stat(filePath)
+          return {
+            filename: file,
+            path: filePath,
+            size: stats.size,
+            createdAt: stats.birthtimeMs || stats.mtimeMs,
+          }
+        })
+    )
+
+    return recordings.sort((a, b) => b.createdAt - a.createdAt)
+  })
+
+  ipcMain.handle('delete-recording', async (_event, filePath: string) => {
+    try {
+      await fs.unlink(filePath)
+      return true
+    } catch (error) {
+      console.error('Failed to delete recording:', error)
+      return false
+    }
+  })
 }
