@@ -18,17 +18,46 @@ export function registerIpcHandlers() {
     }))
   })
 
-  ipcMain.handle('save-recording', async (_event, recordingBuffer: ArrayBuffer) => {
-    const recordingsDir = path.join(app.getPath('videos'), 'CruxRecordings')
-    await fs.mkdir(recordingsDir, { recursive: true })
+  ipcMain.handle(
+    'save-recording',
+    async (_event, recordingBuffer: ArrayBuffer, limits: { maxCount: number; maxSizeGB: number }) => {
+      const recordingsDir = path.join(app.getPath('videos'), 'CruxRecordings')
+      await fs.mkdir(recordingsDir, { recursive: true })
 
-    const fileName = `crux-${formatTimestamp(new Date())}.webm`
-    const filePath = path.join(recordingsDir, fileName)
-    const data = Buffer.from(new Uint8Array(recordingBuffer))
-    await fs.writeFile(filePath, data)
+      const fileName = `crux-${formatTimestamp(new Date())}.webm`
+      const filePath = path.join(recordingsDir, fileName)
+      const data = Buffer.from(new Uint8Array(recordingBuffer))
+      await fs.writeFile(filePath, data)
 
-    return filePath
-  })
+      const allFiles = await fs.readdir(recordingsDir)
+      const recordings = await Promise.all(
+        allFiles
+          .filter((file) => file.endsWith('.webm'))
+          .map(async (file) => {
+            const fp = path.join(recordingsDir, file)
+            const stats = await fs.stat(fp)
+            return { path: fp, size: stats.size, createdAt: stats.birthtimeMs || stats.mtimeMs }
+          }),
+      )
+
+      recordings.sort((a, b) => a.createdAt - b.createdAt)
+
+      let totalSize = recordings.reduce((sum, r) => sum + r.size, 0)
+      const maxSizeBytes = limits.maxSizeGB * 1024 * 1024 * 1024
+
+      while (recordings.length > 0 && (recordings.length > limits.maxCount || totalSize > maxSizeBytes)) {
+        const oldest = recordings.shift()!
+        try {
+          await fs.unlink(oldest.path)
+          totalSize -= oldest.size
+        } catch {
+          // file may have already been removed
+        }
+      }
+
+      return filePath
+    },
+  )
 
   ipcMain.handle('get-recordings', async () => {
     const recordingsDir = path.join(app.getPath('videos'), 'CruxRecordings')

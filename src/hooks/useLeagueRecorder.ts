@@ -116,7 +116,10 @@ export function useLeagueRecorder(settings: RecorderSettings) {
 
           const blob = new Blob(chunksRef.current, { type: selectedMimeType ?? 'video/webm' })
           const recordingBuffer = await blob.arrayBuffer()
-          const savedPath = await window.electronAPI.saveRecording(recordingBuffer)
+          const savedPath = await window.electronAPI.saveRecording(recordingBuffer, {
+            maxCount: settings.maxVideoCount,
+            maxSizeGB: settings.maxFolderSizeGB,
+          })
           setLastSavedPath(savedPath)
           setRecordingState('saved')
         } catch (error) {
@@ -153,7 +156,7 @@ export function useLeagueRecorder(settings: RecorderSettings) {
       clearTimer()
       releaseStream()
     }
-  }, [clearTimer, releaseStream, settings.frameRate, settings.resolution])
+  }, [clearTimer, releaseStream, settings.frameRate, settings.maxFolderSizeGB, settings.maxVideoCount, settings.resolution])
 
   useEffect(() => {
     return () => {

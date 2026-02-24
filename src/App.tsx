@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Header } from './components/Header'
 import { RecorderView } from './screens/RecorderView'
 import { SettingsView } from './screens/SettingsView'
+import { SessionsView } from './screens/SessionsView'
 import { useGameStatus } from './hooks/useGameStatus'
 import { useLeagueRecorder } from './hooks/useLeagueRecorder'
 import { useRecorderSettings } from './hooks/useRecorderSettings'
@@ -13,6 +14,17 @@ function App() {
   const { settings, setSettings } = useRecorderSettings()
   const { recordingState, elapsedSeconds, lastSavedPath, errorMessage, startRecording, stopRecording } =
     useLeagueRecorder(settings)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'r') {
+        e.preventDefault()
+        window.location.reload()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     if (gameActive) {
@@ -49,6 +61,7 @@ function App() {
             <SettingsView settings={settings} onSettingsChange={setSettings} />
           } 
         />
+        <Route path="/sessions" element={<SessionsView />} />
       </Routes>
     </main>
   )

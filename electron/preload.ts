@@ -30,8 +30,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDesktopSources() {
     return ipcRenderer.invoke('get-desktop-sources') as Promise<DesktopSource[]>
   },
-  saveRecording(recordingBuffer: ArrayBuffer) {
-    return ipcRenderer.invoke('save-recording', recordingBuffer) as Promise<string>
+  saveRecording(recordingBuffer: ArrayBuffer, limits: { maxCount: number; maxSizeGB: number }) {
+    return ipcRenderer.invoke('save-recording', recordingBuffer, limits) as Promise<string>
   },
   getRecordings() {
     return ipcRenderer.invoke('get-recordings') as Promise<RecordingSession[]>

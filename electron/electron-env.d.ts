@@ -27,5 +27,7 @@ interface Window {
     onGameStatus: (listener: (payload: { active: boolean }) => void) => () => void
     getDesktopSources: () => Promise<Array<{ id: string; name: string }>>
     saveRecording: (recordingBuffer: ArrayBuffer) => Promise<string>
+    getRecordings: () => Promise<Array<{ filename: string; path: string; size: number; createdAt: number }>>
+    deleteRecording: (filePath: string) => Promise<boolean>
   }
 }

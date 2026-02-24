@@ -20,9 +20,20 @@ function loadRecorderSettings(): RecorderSettings {
     const isResolutionValid = RESOLUTION_OPTIONS.includes(parsed.resolution as ResolutionOption)
     const isFpsValid = FPS_OPTIONS.includes(parsed.frameRate as (typeof FPS_OPTIONS)[number])
 
+    const maxVideoCount =
+      typeof parsed.maxVideoCount === 'number' && parsed.maxVideoCount >= 1
+        ? parsed.maxVideoCount
+        : DEFAULT_SETTINGS.maxVideoCount
+    const maxFolderSizeGB =
+      typeof parsed.maxFolderSizeGB === 'number' && parsed.maxFolderSizeGB > 0
+        ? parsed.maxFolderSizeGB
+        : DEFAULT_SETTINGS.maxFolderSizeGB
+
     return {
       resolution: isResolutionValid ? (parsed.resolution as ResolutionOption) : DEFAULT_SETTINGS.resolution,
       frameRate: isFpsValid ? (parsed.frameRate as (typeof FPS_OPTIONS)[number]) : DEFAULT_SETTINGS.frameRate,
+      maxVideoCount,
+      maxFolderSizeGB,
     }
   } catch {
     return DEFAULT_SETTINGS

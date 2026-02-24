@@ -17,6 +17,16 @@ export function Header() {
           Recorder
         </NavLink>
         <NavLink
+          to="/sessions"
+          className={({ isActive }) =>
+            `rounded-md px-3 py-1 text-sm ${
+              isActive ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
+            }`
+          }
+        >
+          Sessions
+        </NavLink>
+        <NavLink
           to="/settings"
           className={({ isActive }) =>
             `rounded-md px-3 py-1 text-sm ${
