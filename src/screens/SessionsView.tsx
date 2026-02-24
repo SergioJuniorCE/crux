@@ -62,7 +62,9 @@ export function SessionsView() {
     }
   }
 
-  const videoSrc = selected ? `crux://${selected.path}` : undefined
+  const videoSrc = selected
+    ? `crux://recording?path=${encodeURIComponent(selected.path)}`
+    : undefined
 
   return (
     <div className="flex h-[calc(100vh-96px)] gap-4">

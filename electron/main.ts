@@ -1,5 +1,5 @@
 import { app, BrowserWindow, protocol, net } from 'electron'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 
 import { createGamePoller } from './gamePoller'
@@ -24,6 +24,20 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+
+// Must be called before app is ready so the scheme is treated as privileged,
+// allowing the <video> element to issue HTTP range requests for streaming.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'crux',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+    },
+  },
+])
 
 let win: BrowserWindow | null
 
@@ -81,7 +95,16 @@ app.on('activate', () => {
 
 app.whenReady().then(() => {
   protocol.handle('crux', (request) => {
-    return net.fetch('file://' + request.url.slice('crux://'.length))
+    const requestUrl = new URL(request.url);
+    const queryPath = requestUrl.searchParams.get('path');
+    const legacyRawPath = request.url.replace(/^crux:\/\//i, '');
+    let decodedPath = queryPath ? decodeURIComponent(queryPath) : decodeURI(legacyRawPath);
+    if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(decodedPath)) {
+      decodedPath = decodedPath.slice(1);
+    }
+    const fileUrl = pathToFileURL(decodedPath).href;
+
+    return net.fetch(fileUrl);
   })
   registerIpcHandlers()
   gamePoller.start()
