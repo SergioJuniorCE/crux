@@ -8,10 +8,12 @@ import { SessionsView } from './screens/SessionsView'
 import { useGameStatus } from './hooks/useGameStatus'
 import { useLeagueRecorder } from './hooks/useLeagueRecorder'
 import { useRecorderSettings } from './hooks/useRecorderSettings'
+import { useDarkMode } from './hooks/useDarkMode'
 
 function App() {
   const gameActive = useGameStatus()
   const { settings, setSettings } = useRecorderSettings()
+  const { isDark, toggle: toggleDark } = useDarkMode()
   const { recordingState, elapsedSeconds, lastSavedPath, errorMessage, startRecording, stopRecording } =
     useLeagueRecorder(settings)
 
@@ -38,7 +40,7 @@ function App() {
   const settingsSummary = `${settings.resolution} @ ${settings.frameRate} FPS`
 
   return (
-    <main className="min-h-screen w-full bg-zinc-950 p-6 text-zinc-100">
+    <main className="min-h-screen w-full bg-zinc-100 p-6 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <Header />
 
       <Routes>
@@ -58,7 +60,7 @@ function App() {
         <Route 
           path="/settings" 
           element={
-            <SettingsView settings={settings} onSettingsChange={setSettings} />
+            <SettingsView settings={settings} onSettingsChange={setSettings} isDark={isDark} onToggleDark={toggleDark} />
           } 
         />
         <Route path="/sessions" element={<SessionsView />} />

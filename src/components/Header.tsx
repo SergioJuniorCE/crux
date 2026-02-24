@@ -9,7 +9,9 @@ export function Header() {
           to="/"
           className={({ isActive }) =>
             `rounded-md px-3 py-1 text-sm ${
-              isActive ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
+              isActive
+                ? 'bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+                : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
             }`
           }
           end
@@ -20,7 +22,9 @@ export function Header() {
           to="/sessions"
           className={({ isActive }) =>
             `rounded-md px-3 py-1 text-sm ${
-              isActive ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
+              isActive
+                ? 'bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+                : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
             }`
           }
         >
@@ -30,7 +34,9 @@ export function Header() {
           to="/settings"
           className={({ isActive }) =>
             `rounded-md px-3 py-1 text-sm ${
-              isActive ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-200'
+              isActive
+                ? 'bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+                : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
             }`
           }
         >

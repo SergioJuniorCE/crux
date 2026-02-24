@@ -52,6 +52,39 @@ type ExportResult = {
   error?: string
 }
 
+/**
+ * Remuxes a WebM file in-place via ffmpeg -c copy.
+ * MediaRecorder writes a "streaming" WebM without a Cues (seek index) element
+ * and with an invalid duration, making the file unseekable in all players.
+ * A copy-remux rebuilds the container with proper seek tables and duration.
+ */
+function remuxForSeekability(filePath: string): Promise<void> {
+  const dir = path.dirname(filePath)
+  const ext = path.extname(filePath)
+  const base = path.basename(filePath, ext)
+  const tempPath = path.join(dir, `${base}_remux${ext}`)
+
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg(filePath)
+      .outputOptions(['-c', 'copy'])
+      .output(tempPath)
+      .on('error', async (err: Error) => {
+        try { await fs.unlink(tempPath) } catch { /* ignore */ }
+        reject(err)
+      })
+      .on('end', async () => {
+        try {
+          await fs.unlink(filePath)
+          await fs.rename(tempPath, filePath)
+          resolve()
+        } catch (err) {
+          reject(err)
+        }
+      })
+      .run()
+  })
+}
+
 function runFfmpegExport(params: ExportParams & { outputPath: string }): Promise<void> {
   const { sourcePath, startSec, endSec, speedMultiplier, outputPath } = params
   const speed = speedMultiplier ?? 1
@@ -117,6 +150,14 @@ export function registerIpcHandlers() {
       const filePath = path.join(recordingsDir, fileName)
       const data = Buffer.from(new Uint8Array(recordingBuffer))
       await fs.writeFile(filePath, data)
+
+      // Remux to add seek index (Cues) and fix duration — MediaRecorder writes
+      // a streaming WebM that is unseekable in all players without this step.
+      try {
+        await remuxForSeekability(filePath)
+      } catch (err) {
+        console.error('Remux failed, keeping original (file may be unseekable):', err)
+      }
 
       const allFiles = await fs.readdir(recordingsDir)
       const recordings = await Promise.all(
