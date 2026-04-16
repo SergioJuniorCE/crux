@@ -246,7 +246,7 @@ export function SummonerCard({ status, data, error, onRefresh, onGoToSettings, c
             </span>
           </div>
           <ul className="flex flex-col gap-1.5">
-            {matches.map((match) => {
+            {matches.slice(0, 5).map((match) => {
               const self = findSelf(match, account.puuid)
               if (!self) return null
               return (

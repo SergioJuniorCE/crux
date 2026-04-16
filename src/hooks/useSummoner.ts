@@ -19,16 +19,25 @@ const INITIAL_STATE: State = {
   lastFetchedAt: null,
 }
 
+type UseSummonerOptions = {
+  matchCount?: number
+  refreshKey?: number
+  hasEnvKey?: boolean
+}
+
 /**
  * Fetches the Riot summoner bundle (profile, rank, recent matches).
- * Re-fetches when Riot settings change or `refreshKey` bumps.
+ * Re-fetches when Riot settings, matchCount, or `refreshKey` change.
+ * When `hasEnvKey` is true, the renderer may skip sending an api key and
+ * the main process will fall back to `process.env.RIOT_API_KEY`.
  */
-export function useSummoner(settings: RiotSettings, refreshKey = 0) {
+export function useSummoner(settings: RiotSettings, options: UseSummonerOptions = {}) {
+  const { matchCount = 10, refreshKey = 0, hasEnvKey = false } = options
   const [state, setState] = useState<State>(INITIAL_STATE)
   const requestIdRef = useRef(0)
 
   const fetchBundle = useCallback(async () => {
-    if (!isRiotConfigured(settings)) {
+    if (!isRiotConfigured(settings, { hasEnvKey })) {
       setState(INITIAL_STATE)
       return
     }
@@ -37,12 +46,13 @@ export function useSummoner(settings: RiotSettings, refreshKey = 0) {
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
 
     try {
+      const uiKey = settings.apiKey.trim()
       const result = await window.electronAPI.getRiotSummoner({
         platform: settings.platform,
         gameName: settings.gameName.trim(),
         tagLine: settings.tagLine.replace(/^#/, '').trim(),
-        apiKey: settings.apiKey.trim(),
-        matchCount: 5,
+        apiKey: uiKey || undefined,
+        matchCount,
       })
 
       if (reqId !== requestIdRef.current) {
@@ -73,7 +83,7 @@ export function useSummoner(settings: RiotSettings, refreshKey = 0) {
         lastFetchedAt: Date.now(),
       })
     }
-  }, [settings])
+  }, [settings, matchCount, hasEnvKey])
 
   useEffect(() => {
     void fetchBundle()

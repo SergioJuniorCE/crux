@@ -51,6 +51,10 @@ export function useRiotSettings() {
   return { settings, setSettings }
 }
 
-export function isRiotConfigured(settings: RiotSettings): boolean {
-  return Boolean(settings.apiKey && settings.gameName && settings.tagLine)
+export function isRiotConfigured(
+  settings: RiotSettings,
+  options: { hasEnvKey?: boolean } = {},
+): boolean {
+  const hasKey = Boolean(settings.apiKey) || Boolean(options.hasEnvKey)
+  return hasKey && Boolean(settings.gameName) && Boolean(settings.tagLine)
 }

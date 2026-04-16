@@ -1,5 +1,16 @@
 import { useState, type ReactNode } from 'react'
-import { Camera, ExternalLink, Eye, EyeOff, HardDrive, Moon, Palette, Sun, UserCircle2 } from 'lucide-react'
+import {
+  Camera,
+  Check,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  HardDrive,
+  Moon,
+  Palette,
+  Sun,
+  UserCircle2,
+} from 'lucide-react'
 
 import {
   FPS_OPTIONS,
@@ -18,6 +29,7 @@ type SettingsViewProps = {
   onSettingsChange: (updater: (current: RecorderSettings) => RecorderSettings) => void
   riotSettings: RiotSettings
   onRiotSettingsChange: (updater: (current: RiotSettings) => RiotSettings) => void
+  hasEnvRiotKey: boolean
   isDark: boolean
   onToggleDark: () => void
 }
@@ -74,10 +86,13 @@ export function SettingsView({
   onSettingsChange,
   riotSettings,
   onRiotSettingsChange,
+  hasEnvRiotKey,
   isDark,
   onToggleDark,
 }: SettingsViewProps) {
   const [showApiKey, setShowApiKey] = useState(false)
+  const hasUiKey = Boolean(riotSettings.apiKey)
+  const envKeyActive = hasEnvRiotKey && !hasUiKey
 
   return (
     <div className="flex flex-col gap-4">
@@ -163,16 +178,27 @@ export function SettingsView({
           </FieldRow>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               API key
+              {envKeyActive && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9.5px] font-semibold tracking-wide text-emerald-300 ring-1 ring-emerald-500/25">
+                  <Check size={10} />
+                  Loaded from .env
+                </span>
+              )}
+              {hasUiKey && hasEnvRiotKey && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] px-2 py-0.5 text-[9.5px] font-semibold tracking-wide text-muted-foreground ring-1 ring-white/10">
+                  Override active
+                </span>
+              )}
             </span>
             <div className="flex items-center gap-2 rounded-md border border-border bg-background/50 pr-1 transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
               <input
                 type={showApiKey ? 'text' : 'password'}
-                placeholder="RGAPI-..."
+                placeholder={envKeyActive ? 'Using RIOT_API_KEY from .env' : 'RGAPI-...'}
                 autoComplete="off"
                 spellCheck={false}
-                className="w-full bg-transparent px-3 py-2 font-mono text-sm text-foreground outline-none"
+                className="w-full bg-transparent px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                 value={riotSettings.apiKey}
                 onChange={(event) =>
                   onRiotSettingsChange((current) => ({
@@ -191,18 +217,29 @@ export function SettingsView({
                 {showApiKey ? <EyeOff size={13} /> : <Eye size={13} />}
               </button>
             </div>
-            <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-              Get a development key from the
-              <a
-                href="https://developer.riotgames.com/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-0.5 text-primary hover:underline"
-              >
-                Riot Developer Portal
-                <ExternalLink size={10} />
-              </a>
-              . Stored locally on this machine.
+            <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
+              {envKeyActive ? (
+                <>
+                  Using <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">RIOT_API_KEY</code>
+                  from your <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">.env</code>.
+                  Enter a key above to override.
+                </>
+              ) : (
+                <>
+                  Get a development key from the
+                  <a
+                    href="https://developer.riotgames.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                  >
+                    Riot Developer Portal
+                    <ExternalLink size={10} />
+                  </a>
+                  . Or set <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">RIOT_API_KEY</code> in a
+                  <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">.env</code> file at the project root.
+                </>
+              )}
             </span>
           </label>
         </div>

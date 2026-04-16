@@ -13,6 +13,7 @@ type Props = {
 
 const NAV_ITEMS: { to: string; label: string; end?: boolean }[] = [
   { to: '/', label: 'Recorder', end: true },
+  { to: '/profile', label: 'Profile' },
   { to: '/sessions', label: 'Sessions' },
   { to: '/settings', label: 'Settings' },
 ]

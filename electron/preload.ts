@@ -33,7 +33,7 @@ type RiotFetchParams = {
   platform: string
   gameName: string
   tagLine: string
-  apiKey: string
+  apiKey?: string
   matchCount?: number
 }
 
@@ -69,5 +69,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   getRiotSummoner(params: RiotFetchParams) {
     return ipcRenderer.invoke('riot-get-summoner', params) as Promise<RiotFetchResult>
+  },
+  getRiotEnvStatus() {
+    return ipcRenderer.invoke('riot-env-status') as Promise<{ hasEnvKey: boolean }>
   },
 })

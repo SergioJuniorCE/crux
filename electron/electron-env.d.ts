@@ -56,5 +56,6 @@ interface Window {
     getRiotSummoner: (
       params: import('../src/types/riot').RiotFetchParams,
     ) => Promise<import('../src/types/riot').RiotFetchResult>
+    getRiotEnvStatus: () => Promise<{ hasEnvKey: boolean }>
   }
 }

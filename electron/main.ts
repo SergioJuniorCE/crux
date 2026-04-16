@@ -1,14 +1,38 @@
 import { app, BrowserWindow, protocol } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { createReadStream } from 'node:fs'
+import { createReadStream, existsSync } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { Readable } from 'node:stream'
+import { createRequire } from 'node:module'
 
 import { createGamePoller } from './gamePoller'
 import { registerIpcHandlers } from './ipcHandlers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Load .env from the project root in dev and the resources dir in production.
+// Silently no-ops if the file doesn't exist.
+function loadDotenv() {
+  const require = createRequire(import.meta.url)
+  const dotenv = require('dotenv') as typeof import('dotenv')
+
+  const candidates = [
+    path.join(process.cwd(), '.env'),
+    path.join(__dirname, '..', '.env'),
+    path.join(process.resourcesPath ?? '', '.env'),
+  ]
+
+  for (const envPath of candidates) {
+    if (envPath && existsSync(envPath)) {
+      dotenv.config({ path: envPath })
+      return envPath
+    }
+  }
+  return null
+}
+
+loadDotenv()
 
 // The built directory structure
 //

@@ -228,6 +228,10 @@ export function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle('riot-env-status', async (): Promise<{ hasEnvKey: boolean }> => {
+    return { hasEnvKey: Boolean(process.env.RIOT_API_KEY?.trim()) }
+  })
+
   ipcMain.handle(
     'riot-get-summoner',
     async (
@@ -236,16 +240,20 @@ export function registerIpcHandlers() {
         platform: PlatformRegion
         gameName: string
         tagLine: string
-        apiKey: string
+        apiKey?: string
         matchCount?: number
       },
     ): Promise<
       { success: true; data: RiotProfileBundle } | { success: false; error: string; status?: number }
     > => {
-      const { platform, gameName, tagLine, apiKey, matchCount } = params
+      const { platform, gameName, tagLine, matchCount } = params
+
+      // Prefer the renderer-provided key when present so users can override
+      // whatever lives in .env without a restart. Fall back to the env var.
+      const apiKey = params.apiKey?.trim() || process.env.RIOT_API_KEY?.trim() || ''
 
       if (!apiKey) {
-        return { success: false, error: 'Missing Riot API key.' }
+        return { success: false, error: 'Missing Riot API key. Set RIOT_API_KEY in .env or enter one in Settings.' }
       }
       if (!gameName || !tagLine) {
         return { success: false, error: 'Missing Riot ID (gameName#tagLine).' }
