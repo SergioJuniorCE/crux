@@ -86,6 +86,19 @@ export type RiotMatchParticipant = {
   goldEarned: number
   champLevel: number
   teamPosition?: string
+  item0: number
+  item1: number
+  item2: number
+  item3: number
+  item4: number
+  item5: number
+  item6: number
+  summoner1Id: number
+  summoner2Id: number
+  totalDamageDealtToChampions: number
+  visionScore: number
+  wardsPlaced: number
+  wardsKilled: number
 }
 
 export type RiotMatch = {
@@ -123,3 +136,25 @@ export type RiotFetchParams = {
 export type RiotFetchResult =
   | { success: true; data: RiotProfileBundle }
   | { success: false; error: string; status?: number }
+
+export type LcuSummoner = {
+  accountId: number
+  displayName: string
+  gameName: string
+  internalName: string
+  profileIconId: number
+  puuid: string
+  summonerId: number
+  summonerLevel: number
+  tagLine: string
+}
+
+export type LcuCurrentSummoner = {
+  summoner: LcuSummoner
+  platform: PlatformRegion | null
+  regionCode: string | null
+}
+
+export type LcuCurrentSummonerResult =
+  | { success: true; data: LcuCurrentSummoner }
+  | { success: false; error: string }

@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { Moon, Sun, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusPill, type StatusPillVariant } from './StatusPill'
+import { PlayerSearch } from './PlayerSearch'
 import type { RecordingState } from '../types/recorder'
 
 type Props = {
@@ -12,8 +13,8 @@ type Props = {
 }
 
 const NAV_ITEMS: { to: string; label: string; end?: boolean }[] = [
-  { to: '/', label: 'Recorder', end: true },
-  { to: '/profile', label: 'Profile' },
+  { to: '/', label: 'Profile', end: true },
+  { to: '/recorder', label: 'Recorder' },
   { to: '/sessions', label: 'Sessions' },
   { to: '/settings', label: 'Settings' },
 ]
@@ -72,6 +73,7 @@ export function Header({ gameActive, recordingState, isDark, onToggleDark }: Pro
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <PlayerSearch className="w-64" />
           <StatusPill variant={status} />
           <button
             type="button"

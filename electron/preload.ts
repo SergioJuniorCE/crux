@@ -41,6 +41,10 @@ type RiotFetchResult =
   | { success: true; data: unknown }
   | { success: false; error: string; status?: number }
 
+type LcuCurrentSummonerResult =
+  | { success: true; data: unknown }
+  | { success: false; error: string }
+
 contextBridge.exposeInMainWorld('electronAPI', {
   onGameStatus(listener: (payload: GameStatusPayload) => void) {
     const wrappedListener = (_event: Electron.IpcRendererEvent, payload: GameStatusPayload) => {
@@ -72,5 +76,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   getRiotEnvStatus() {
     return ipcRenderer.invoke('riot-env-status') as Promise<{ hasEnvKey: boolean }>
+  },
+  getCurrentSummonerFromClient() {
+    return ipcRenderer.invoke('lcu-get-current-summoner') as Promise<LcuCurrentSummonerResult>
   },
 })

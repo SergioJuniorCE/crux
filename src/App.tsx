@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo } from 'react'
+import { Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { Header } from './components/Header'
 import { RecorderView } from './screens/RecorderView'
@@ -9,8 +9,9 @@ import { ProfileView } from './screens/ProfileView'
 import { useGameStatus } from './hooks/useGameStatus'
 import { useLeagueRecorder } from './hooks/useLeagueRecorder'
 import { useRecorderSettings } from './hooks/useRecorderSettings'
-import { useRiotSettings, isRiotConfigured } from './hooks/useRiotSettings'
+import { useRiotSettings, isRiotConfigured, type RiotSettings } from './hooks/useRiotSettings'
 import { useRiotEnvStatus } from './hooks/useRiotEnvStatus'
+import { useLcuCurrentSummoner } from './hooks/useLcuCurrentSummoner'
 import { useSummoner } from './hooks/useSummoner'
 import { useDarkMode } from './hooks/useDarkMode'
 
@@ -19,11 +20,28 @@ function App() {
   const { settings, setSettings } = useRecorderSettings()
   const { settings: riotSettings, setSettings: setRiotSettings } = useRiotSettings()
   const { hasEnvKey } = useRiotEnvStatus()
+  const lcu = useLcuCurrentSummoner({ pollMs: 30_000 })
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { recordingState, elapsedSeconds, lastSavedPath, errorMessage, startRecording, stopRecording } =
     useLeagueRecorder(settings)
-  const summoner = useSummoner(riotSettings, { matchCount: 15, hasEnvKey })
-  const configured = isRiotConfigured(riotSettings, { hasEnvKey })
+
+  // When the League client is running, prefer its identity over whatever
+  // the user typed into Settings. The API key always comes from user
+  // settings (or the RIOT_API_KEY env var in main).
+  const effectiveRiotSettings = useMemo<RiotSettings>(() => {
+    if (lcu.isLive && lcu.data) {
+      return {
+        ...riotSettings,
+        gameName: lcu.data.summoner.gameName || lcu.data.summoner.displayName || riotSettings.gameName,
+        tagLine: lcu.data.summoner.tagLine || riotSettings.tagLine,
+        platform: lcu.data.platform ?? riotSettings.platform,
+      }
+    }
+    return riotSettings
+  }, [lcu.isLive, lcu.data, riotSettings])
+
+  const summoner = useSummoner(effectiveRiotSettings, { matchCount: 15, hasEnvKey })
+  const configured = isRiotConfigured(effectiveRiotSettings, { hasEnvKey })
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -65,6 +83,35 @@ function App() {
             <Route
               path="/"
               element={
+                <ProfileView
+                  status={summoner.status}
+                  data={summoner.data}
+                  error={summoner.error}
+                  configured={configured}
+                  platform={effectiveRiotSettings.platform}
+                  clientLive={lcu.isLive}
+                  isViewingOther={false}
+                  ownIdentity={{
+                    gameName: effectiveRiotSettings.gameName,
+                    tagLine: effectiveRiotSettings.tagLine,
+                  }}
+                  onRefresh={() => {
+                    void lcu.refetch()
+                    void summoner.refetch()
+                  }}
+                  onOpenSettings={() => navigate('/settings')}
+                  onSelectPlayer={(gameName, tagLine) => {
+                    navigate(
+                      `/profile/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+                    )
+                  }}
+                  onBackToOwn={() => navigate('/')}
+                />
+              }
+            />
+            <Route
+              path="/recorder"
+              element={
                 <RecorderView
                   gameActive={gameActive}
                   recordingState={recordingState}
@@ -96,16 +143,22 @@ function App() {
               }
             />
             <Route
-              path="/profile"
+              path="/profile/:gameName/:tagLine"
               element={
-                <ProfileView
-                  status={summoner.status}
-                  data={summoner.data}
-                  error={summoner.error}
-                  configured={configured}
-                  platform={riotSettings.platform}
-                  onRefresh={() => void summoner.refetch()}
+                <OtherPlayerProfileRoute
+                  baseSettings={effectiveRiotSettings}
+                  hasEnvKey={hasEnvKey}
                   onOpenSettings={() => navigate('/settings')}
+                  onSelectPlayer={(gameName, tagLine) => {
+                    navigate(
+                      `/profile/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+                    )
+                  }}
+                  onBackToOwn={() => navigate('/')}
+                  ownIdentity={{
+                    gameName: effectiveRiotSettings.gameName,
+                    tagLine: effectiveRiotSettings.tagLine,
+                  }}
                 />
               }
             />
@@ -118,3 +171,64 @@ function App() {
 }
 
 export default App
+
+type OtherPlayerProfileRouteProps = {
+  baseSettings: RiotSettings
+  hasEnvKey: boolean
+  ownIdentity: { gameName: string; tagLine: string }
+  onOpenSettings: () => void
+  onSelectPlayer: (gameName: string, tagLine: string) => void
+  onBackToOwn: () => void
+}
+
+/**
+ * Renders someone else's Riot profile. Reuses our platform + API key from
+ * the effective settings, but swaps in the Riot ID from the URL. A separate
+ * `useSummoner` instance keeps this fetch independent from the user's own
+ * profile so navigating between players doesn't clobber "my profile" cache.
+ */
+function OtherPlayerProfileRoute({
+  baseSettings,
+  hasEnvKey,
+  ownIdentity,
+  onOpenSettings,
+  onSelectPlayer,
+  onBackToOwn,
+}: OtherPlayerProfileRouteProps) {
+  const params = useParams<{ gameName: string; tagLine: string }>()
+  const gameName = params.gameName ? decodeURIComponent(params.gameName) : ''
+  const tagLine = params.tagLine ? decodeURIComponent(params.tagLine).replace(/^#/, '') : ''
+
+  const targetSettings = useMemo<RiotSettings>(
+    () => ({
+      ...baseSettings,
+      gameName,
+      tagLine,
+    }),
+    [baseSettings, gameName, tagLine],
+  )
+
+  const summoner = useSummoner(targetSettings, { matchCount: 15, hasEnvKey })
+  const configured = isRiotConfigured(targetSettings, { hasEnvKey })
+
+  const refresh = useCallback(() => {
+    void summoner.refetch()
+  }, [summoner])
+
+  return (
+    <ProfileView
+      status={summoner.status}
+      data={summoner.data}
+      error={summoner.error}
+      configured={configured}
+      platform={targetSettings.platform}
+      clientLive={false}
+      isViewingOther
+      ownIdentity={ownIdentity}
+      onRefresh={refresh}
+      onOpenSettings={onOpenSettings}
+      onSelectPlayer={onSelectPlayer}
+      onBackToOwn={onBackToOwn}
+    />
+  )
+}

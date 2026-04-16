@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 
 import { formatTimestamp } from './utils'
 import { getSummonerBundle, type PlatformRegion, type RiotProfileBundle } from './riotApi'
+import { getCurrentSummonerFromClient, type CurrentSummonerPayload } from './lcuClient'
 
 const require = createRequire(import.meta.url)
 const ffmpeg = require('fluent-ffmpeg') as typeof import('fluent-ffmpeg')
@@ -231,6 +232,21 @@ export function registerIpcHandlers() {
   ipcMain.handle('riot-env-status', async (): Promise<{ hasEnvKey: boolean }> => {
     return { hasEnvKey: Boolean(process.env.RIOT_API_KEY?.trim()) }
   })
+
+  ipcMain.handle(
+    'lcu-get-current-summoner',
+    async (): Promise<
+      { success: true; data: CurrentSummonerPayload } | { success: false; error: string }
+    > => {
+      try {
+        const data = await getCurrentSummonerFromClient()
+        return { success: true, data }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        return { success: false, error: message }
+      }
+    },
+  )
 
   ipcMain.handle(
     'riot-get-summoner',

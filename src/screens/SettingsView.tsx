@@ -1,13 +1,16 @@
 import { useState, type ReactNode } from 'react'
 import {
+  AlertTriangle,
   Camera,
   Check,
   ExternalLink,
   Eye,
   EyeOff,
   HardDrive,
+  Loader2,
   Moon,
   Palette,
+  Sparkles,
   Sun,
   UserCircle2,
 } from 'lucide-react'
@@ -91,8 +94,35 @@ export function SettingsView({
   onToggleDark,
 }: SettingsViewProps) {
   const [showApiKey, setShowApiKey] = useState(false)
+  const [detecting, setDetecting] = useState(false)
+  const [detectError, setDetectError] = useState<string | null>(null)
+  const [detectSuccessAt, setDetectSuccessAt] = useState<number | null>(null)
   const hasUiKey = Boolean(riotSettings.apiKey)
   const envKeyActive = hasEnvRiotKey && !hasUiKey
+
+  const handleDetectFromClient = async () => {
+    setDetecting(true)
+    setDetectError(null)
+    try {
+      const result = await window.electronAPI.getCurrentSummonerFromClient()
+      if (result.success) {
+        const { summoner, platform } = result.data
+        onRiotSettingsChange((current) => ({
+          ...current,
+          gameName: summoner.gameName || summoner.displayName || current.gameName,
+          tagLine: summoner.tagLine || current.tagLine,
+          platform: platform ?? current.platform,
+        }))
+        setDetectSuccessAt(Date.now())
+      } else {
+        setDetectError(result.error)
+      }
+    } catch (err) {
+      setDetectError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setDetecting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,6 +139,51 @@ export function SettingsView({
         description="Used to fetch your summoner profile, rank, and match history."
       >
         <div className="flex flex-col gap-5">
+          {/* Auto-detect from running League client */}
+          <div className="rounded-lg border border-dashed border-border bg-background/30 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Sparkles size={13} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">Detect from League client</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Reads your Riot ID and region directly from the running game client — no API key needed.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleDetectFromClient()}
+                disabled={detecting}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {detecting ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Detecting...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={12} />
+                    Detect
+                  </>
+                )}
+              </button>
+            </div>
+            {detectError && (
+              <div className="mt-2.5 flex items-start gap-1.5 rounded-md bg-red-500/5 px-2.5 py-1.5 text-[11px] text-red-300 ring-1 ring-red-500/20">
+                <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+                <span className="break-words">{detectError}</span>
+              </div>
+            )}
+            {!detectError && detectSuccessAt && (
+              <div className="mt-2.5 flex items-center gap-1.5 rounded-md bg-emerald-500/5 px-2.5 py-1.5 text-[11px] text-emerald-300 ring-1 ring-emerald-500/20">
+                <Check size={11} />
+                Filled Riot ID and region from the active client.
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
             <label className="flex flex-col gap-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
