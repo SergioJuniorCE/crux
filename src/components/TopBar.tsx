@@ -1,33 +1,33 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowRight, Search, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowRight, Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import { SidebarTrigger } from '@/components/ui/sidebar'
-import { toast } from '@/components/ui/sonner'
-import { ddragonProfileIcon } from '@/lib/leagueAssets'
-import { cn } from '@/lib/utils'
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { toast } from "@/components/ui/sonner";
+import { ddragonProfileIcon } from "@/lib/leagueAssets";
+import { cn } from "@/lib/utils";
 import {
   PLATFORM_REGIONS,
   REGION_LABELS,
   type PlatformRegion,
-} from '../types/riot'
+} from "../types/riot";
 
 type CurrentProfile = {
-  gameName: string
-  tagLine: string
-  platform: PlatformRegion
-  profileIconId?: number
-  dataDragonVersion?: string
-}
+  gameName: string;
+  tagLine: string;
+  platform: PlatformRegion;
+  profileIconId?: number;
+  dataDragonVersion?: string;
+};
 
 type Props = {
   /** The signed-in user's identity, used to render the profile chip. */
-  current: CurrentProfile
+  current: CurrentProfile;
   /** Whether identity is fully configured (Riot ID + API access). */
-  configured: boolean
+  configured: boolean;
   /** Click handler for the profile chip — typically navigates home. */
-  onSelectOwn: () => void
-}
+  onSelectOwn: () => void;
+};
 
 /**
  * Sticky top bar.
@@ -38,23 +38,23 @@ type Props = {
  * sidebar.
  */
 export function TopBar({ current, configured, onSelectOwn }: Props) {
-  const [isScrolled, setIsScrolled] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const updateScrolled = () => setIsScrolled(window.scrollY > 4)
+    const updateScrolled = () => setIsScrolled(window.scrollY > 4);
 
-    updateScrolled()
-    window.addEventListener('scroll', updateScrolled, { passive: true })
-    return () => window.removeEventListener('scroll', updateScrolled)
-  }, [])
+    updateScrolled();
+    window.addEventListener("scroll", updateScrolled, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrolled);
+  }, []);
 
   return (
     <div
       className={cn(
-        'sticky top-0 z-40 flex h-14 items-center gap-3 border-b px-4 transition-[background-color,border-color,box-shadow] duration-300',
+        "sticky top-0 z-40 flex h-14 items-center gap-3 border-b px-4 pt-1 transition-[background-color,border-color,box-shadow] duration-300",
         isScrolled
-          ? 'border-border bg-background/80 shadow-sm backdrop-blur-md'
-          : 'border-transparent bg-background',
+          ? "border-border bg-background/80 shadow-sm backdrop-blur-md"
+          : "border-transparent bg-background",
       )}
     >
       <SidebarTrigger className="-ml-1" />
@@ -68,7 +68,7 @@ export function TopBar({ current, configured, onSelectOwn }: Props) {
         <PlayerSearchInline platform={current.platform} />
       </div>
     </div>
-  )
+  );
 }
 
 function ProfileChip({
@@ -76,15 +76,17 @@ function ProfileChip({
   configured,
   onSelect,
 }: {
-  current: CurrentProfile
-  configured: boolean
-  onSelect: () => void
+  current: CurrentProfile;
+  configured: boolean;
+  onSelect: () => void;
 }) {
-  const hasIdentity = Boolean(current.gameName && current.tagLine)
+  const hasIdentity = Boolean(current.gameName && current.tagLine);
   const iconUrl =
-    configured && current.profileIconId !== undefined && current.dataDragonVersion
+    configured &&
+    current.profileIconId !== undefined &&
+    current.dataDragonVersion
       ? ddragonProfileIcon(current.dataDragonVersion, current.profileIconId)
-      : null
+      : null;
 
   if (!hasIdentity) {
     return (
@@ -100,7 +102,7 @@ function ProfileChip({
           {current.platform}
         </span>
       </div>
-    )
+    );
   }
 
   return (
@@ -117,7 +119,7 @@ function ProfileChip({
             alt=""
             className="h-full w-full object-cover"
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'
+              (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
             }}
           />
         ) : (
@@ -143,7 +145,7 @@ function ProfileChip({
         </span>
       </span>
     </button>
-  )
+  );
 }
 
 /**
@@ -153,49 +155,49 @@ function ProfileChip({
  */
 function PlayerSearchInline({ platform }: { platform: PlatformRegion }) {
   const [selectedPlatform, setSelectedPlatform] =
-    useState<PlatformRegion>(platform)
-  const [value, setValue] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
+    useState<PlatformRegion>(platform);
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setSelectedPlatform(platform)
-  }, [platform])
+    setSelectedPlatform(platform);
+  }, [platform]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const raw = value.trim()
-    if (!raw) return
-    const match = raw.match(/^(.+?)\s*[#-]\s*([A-Za-z0-9]+)$/)
+    e.preventDefault();
+    const raw = value.trim();
+    if (!raw) return;
+    const match = raw.match(/^(.+?)\s*[#-]\s*([A-Za-z0-9]+)$/);
     if (!match) {
-      const message = 'Use the format Name#TAG'
-      setError(message)
-      toast.error('Invalid Riot ID', { description: message })
-      return
+      const message = "Use the format Name#TAG";
+      setError(message);
+      toast.error("Invalid Riot ID", { description: message });
+      return;
     }
-    const [, gameName, tagLine] = match
-    const cleanName = gameName.trim()
-    const cleanTag = tagLine.trim()
+    const [, gameName, tagLine] = match;
+    const cleanName = gameName.trim();
+    const cleanTag = tagLine.trim();
     if (!cleanName || !cleanTag) {
-      const message = 'Use the format Name#TAG'
-      setError(message)
-      toast.error('Invalid Riot ID', { description: message })
-      return
+      const message = "Use the format Name#TAG";
+      setError(message);
+      toast.error("Invalid Riot ID", { description: message });
+      return;
     }
-    setError(null)
+    setError(null);
     navigate(
       `/profile/${encodeURIComponent(selectedPlatform)}/${encodeURIComponent(cleanName)}/${encodeURIComponent(cleanTag)}`,
-    )
-    setValue('')
-  }
+    );
+    setValue("");
+  };
 
   return (
     <form
       onSubmit={handleSubmit}
       role="search"
       className={cn(
-        'group relative flex h-9 min-w-0 flex-1 items-center gap-1 rounded-md border bg-card pl-2 pr-1 transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15',
-        error ? 'border-red-500/50' : 'border-border',
+        "group relative flex h-9 min-w-0 flex-1 items-center gap-1 rounded-md border bg-card pl-2 pr-1 transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15",
+        error ? "border-red-500/50" : "border-border",
       )}
     >
       <Search size={13} className="shrink-0 text-muted-foreground" />
@@ -203,8 +205,8 @@ function PlayerSearchInline({ platform }: { platform: PlatformRegion }) {
         type="text"
         value={value}
         onChange={(e) => {
-          setValue(e.target.value)
-          if (error) setError(null)
+          setValue(e.target.value);
+          if (error) setError(null);
         }}
         placeholder="Search summoner — Name#TAG"
         spellCheck={false}
@@ -216,7 +218,7 @@ function PlayerSearchInline({ platform }: { platform: PlatformRegion }) {
       {value && (
         <button
           type="button"
-          onClick={() => setValue('')}
+          onClick={() => setValue("")}
           className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
           aria-label="Clear search"
           tabIndex={-1}
@@ -251,5 +253,5 @@ function PlayerSearchInline({ platform }: { platform: PlatformRegion }) {
         </div>
       )}
     </form>
-  )
+  );
 }
