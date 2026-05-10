@@ -253,92 +253,90 @@ export function ProfileView({
           </motion.button>
         }
       />
-
-      <motion.section
-        variants={fadeUp}
-        className="crux-grain relative overflow-hidden rounded-xl border border-border bg-card px-5 py-4"
-      >
-        {/* Editorial top hairline that sweeps in from the left */}
-        <motion.span
-          aria-hidden
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.9, ease: EASE_OUT_EXPO, delay: 0.1 }}
-          style={{ transformOrigin: "0% 50%" }}
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/20 to-transparent"
-        />
-        {/* Soft radial wash anchored bottom-right — atmosphere, not noise */}
-        <div className="pointer-events-none absolute -bottom-24 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
-
-        <div className="flex flex-wrap items-center gap-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay: 0.15 }}
-            className="relative shrink-0"
-          >
-            <img
-              src={ddragonProfileIcon(
-                dataDragonVersion,
-                summoner.profileIconId,
-              )}
-              alt=""
-              className="h-[68px] w-[68px] rounded-2xl border border-border object-cover shadow-lg shadow-black/30 ring-1 ring-white/5"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.visibility =
-                  "hidden";
-              }}
-            />
-            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-md shadow-primary/20">
-              {summoner.summonerLevel}
-            </span>
-          </motion.div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-2">
-              <motion.h1
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay: 0.2 }}
-                className="truncate font-display text-[28px] font-semibold leading-[1.05] tracking-[-0.035em] text-foreground"
-              >
-                {account.gameName}
-              </motion.h1>
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, ease: EASE_OUT_EXPO, delay: 0.35 }}
-                className="font-mono text-[13px] tracking-tight text-muted-foreground"
-              >
-                #{account.tagLine}
-              </motion.span>
-            </div>
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: EASE_OUT_EXPO, delay: 0.3 }}
-              className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-primary/80" />
-                {REGION_LABELS[platform]}
-              </span>
-              <span className="text-muted-foreground/30">/</span>
-              <span>Lvl {summoner.summonerLevel}</span>
-              <span className="text-muted-foreground/30">/</span>
-              <span className="normal-case tracking-normal tabular-nums text-muted-foreground/80">
-                updated {relativeTime(summoner.revisionDate)}
-              </span>
-            </motion.div>
-          </div>
-        </div>
-      </motion.section>
-
       <motion.div
         variants={containerStagger}
         className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]"
       >
         <motion.aside variants={containerStagger} className="flex flex-col gap-3">
+          <motion.section
+            variants={fadeUp}
+            className="crux-grain relative overflow-hidden rounded-xl border border-border bg-card px-5 py-4"
+          >
+            {/* Editorial top hairline that sweeps in from the left */}
+            <motion.span
+              aria-hidden
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.9, ease: EASE_OUT_EXPO, delay: 0.1 }}
+              style={{ transformOrigin: "0% 50%" }}
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/20 to-transparent"
+            />
+            {/* Soft radial wash anchored bottom-right — atmosphere, not noise */}
+            <div className="pointer-events-none absolute -bottom-24 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+
+            <div className="flex flex-wrap items-center gap-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay: 0.15 }}
+                className="relative shrink-0"
+              >
+                <img
+                  src={ddragonProfileIcon(
+                    dataDragonVersion,
+                    summoner.profileIconId,
+                  )}
+                  alt=""
+                  className="h-[68px] w-[68px] rounded-2xl border border-border object-cover shadow-lg shadow-black/30 ring-1 ring-white/5"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.visibility =
+                      "hidden";
+                  }}
+                />
+                <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-md shadow-primary/20">
+                  {summoner.summonerLevel}
+                </span>
+              </motion.div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay: 0.2 }}
+                    className="truncate font-display text-[28px] font-semibold leading-[1.05] tracking-[-0.035em] text-foreground"
+                  >
+                    {account.gameName}
+                  </motion.h1>
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, ease: EASE_OUT_EXPO, delay: 0.35 }}
+                    className="font-mono text-[13px] tracking-tight text-muted-foreground"
+                  >
+                    #{account.tagLine}
+                  </motion.span>
+                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.55, ease: EASE_OUT_EXPO, delay: 0.3 }}
+                  className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-primary/80" />
+                    {REGION_LABELS[platform]}
+                  </span>
+                  <span className="text-muted-foreground/30">/</span>
+                  <span>Lvl {summoner.summonerLevel}</span>
+                  <span className="text-muted-foreground/30">/</span>
+                  <span className="normal-case tracking-normal tabular-nums text-muted-foreground/80">
+                    updated {relativeTime(summoner.revisionDate)}
+                  </span>
+                </motion.div>
+              </div>
+            </div>
+          </motion.section>
           <motion.div variants={fadeUp}>
             {soloEntry ? (
               <RankedPanel
