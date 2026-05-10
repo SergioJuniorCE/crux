@@ -28,4 +28,6 @@ export function Toaster({ isDark = true, ...props }: Props) {
   );
 }
 
+// Re-exporting sonner's toast keeps call sites aligned with the UI wrapper.
+// eslint-disable-next-line react-refresh/only-export-components
 export { toast } from "sonner";

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { RiotProfileBundle } from '../types/riot'
-import { isRiotConfigured, type RiotSettings } from './useRiotSettings'
+import type { RiotSettings } from './useRiotSettings'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
@@ -35,9 +35,13 @@ export function useSummoner(settings: RiotSettings, options: UseSummonerOptions 
   const { matchCount = 10, refreshKey = 0, hasEnvKey = false } = options
   const [state, setState] = useState<State>(INITIAL_STATE)
   const requestIdRef = useRef(0)
+  const platform = settings.platform
+  const gameName = settings.gameName.trim()
+  const tagLine = settings.tagLine.replace(/^#/, '').trim()
+  const apiKey = settings.apiKey.trim()
 
   const fetchBundle = useCallback(async () => {
-    if (!isRiotConfigured(settings, { hasEnvKey })) {
+    if (!(apiKey || hasEnvKey) || !gameName || !tagLine) {
       setState(INITIAL_STATE)
       return
     }
@@ -46,12 +50,11 @@ export function useSummoner(settings: RiotSettings, options: UseSummonerOptions 
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
 
     try {
-      const uiKey = settings.apiKey.trim()
       const result = await window.electronAPI.getRiotSummoner({
-        platform: settings.platform,
-        gameName: settings.gameName.trim(),
-        tagLine: settings.tagLine.replace(/^#/, '').trim(),
-        apiKey: uiKey || undefined,
+        platform,
+        gameName,
+        tagLine,
+        apiKey: apiKey || undefined,
         matchCount,
       })
 
@@ -83,7 +86,7 @@ export function useSummoner(settings: RiotSettings, options: UseSummonerOptions 
         lastFetchedAt: Date.now(),
       })
     }
-  }, [settings, matchCount, hasEnvKey])
+  }, [apiKey, gameName, hasEnvKey, matchCount, platform, tagLine])
 
   useEffect(() => {
     void fetchBundle()

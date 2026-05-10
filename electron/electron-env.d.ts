@@ -44,6 +44,7 @@ type ExportResult = {
 // Used in Renderer process, exposed in `preload.ts`
 interface Window {
   electronAPI: {
+    openExternalUrl: (url: string) => Promise<boolean>
     onGameStatus: (listener: (payload: { active: boolean }) => void) => () => void
     getDesktopSources: () => Promise<Array<{ id: string; name: string }>>
     saveRecording: (

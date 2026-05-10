@@ -338,7 +338,12 @@ export function SettingsView({
                   Get a development key from the
                   <a
                     href="https://developer.riotgames.com/"
-                    target="_blank"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void window.electronAPI.openExternalUrl(
+                        "https://developer.riotgames.com/",
+                      );
+                    }}
                     rel="noreferrer"
                     className="inline-flex items-center gap-0.5 text-primary hover:underline"
                   >

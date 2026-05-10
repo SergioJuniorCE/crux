@@ -46,6 +46,9 @@ type LcuCurrentSummonerResult =
   | { success: false; error: string }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  openExternalUrl(url: string) {
+    return ipcRenderer.invoke('open-external-url', url) as Promise<boolean>
+  },
   onGameStatus(listener: (payload: GameStatusPayload) => void) {
     const wrappedListener = (_event: Electron.IpcRendererEvent, payload: GameStatusPayload) => {
       listener(payload)

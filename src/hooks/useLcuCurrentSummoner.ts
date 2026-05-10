@@ -16,6 +16,17 @@ const INITIAL: LcuState = {
   lastCheckedAt: null,
 }
 
+function isSameCurrentSummoner(a: LcuCurrentSummoner | null, b: LcuCurrentSummoner): boolean {
+  return (
+    a?.platform === b.platform &&
+    a.regionCode === b.regionCode &&
+    a.summoner.puuid === b.summoner.puuid &&
+    a.summoner.gameName === b.summoner.gameName &&
+    a.summoner.displayName === b.summoner.displayName &&
+    a.summoner.tagLine === b.summoner.tagLine
+  )
+}
+
 type Options = {
   /** Poll interval in ms while the app is open. Pass 0 to disable polling. */
   pollMs?: number
@@ -47,12 +58,12 @@ export function useLcuCurrentSummoner(options: Options = {}) {
     try {
       const result = await window.electronAPI.getCurrentSummonerFromClient()
       if (result.success) {
-        setState({
+        setState((prev) => ({
           status: 'live',
-          data: result.data,
+          data: isSameCurrentSummoner(prev.data, result.data) ? prev.data : result.data,
           error: null,
           lastCheckedAt: Date.now(),
-        })
+        }))
       } else {
         setState((prev) => ({
           status: 'unavailable',

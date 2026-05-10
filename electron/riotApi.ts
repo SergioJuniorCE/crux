@@ -47,6 +47,98 @@ const REGIONAL_BY_PLATFORM: Record<PlatformRegion, RegionalRoute> = {
   vn2: 'sea',
 }
 
+const MINUTE_MS = 60_000
+const HOUR_MS = 60 * MINUTE_MS
+
+const CACHE_TTL = {
+  profileBundle: 2 * MINUTE_MS,
+  match: 7 * 24 * HOUR_MS,
+  dataDragonVersion: 6 * HOUR_MS,
+} as const
+
+type CacheEntry<T> = {
+  value: T
+  expiresAt: number
+}
+
+type RiotCacheStore = {
+  get<T>(key: string): T | null
+  set<T>(key: string, value: T, ttlMs: number): void
+}
+
+class InMemoryRiotCacheStore implements RiotCacheStore {
+  private readonly entries = new Map<string, CacheEntry<unknown>>()
+
+  get<T>(key: string): T | null {
+    const entry = this.entries.get(key)
+    if (!entry) return null
+
+    if (entry.expiresAt <= Date.now()) {
+      this.entries.delete(key)
+      return null
+    }
+
+    return entry.value as T
+  }
+
+  set<T>(key: string, value: T, ttlMs: number): void {
+    this.entries.set(key, {
+      value,
+      expiresAt: Date.now() + ttlMs,
+    })
+  }
+}
+
+const riotCache: RiotCacheStore = new InMemoryRiotCacheStore()
+const inFlightCacheReads = new Map<string, Promise<unknown>>()
+
+function normalizeCacheSegment(value: string): string {
+  return encodeURIComponent(value.trim().replace(/^#/, '').toLowerCase())
+}
+
+function profileBundleCacheKey(
+  platform: PlatformRegion,
+  gameName: string,
+  tagLine: string,
+  matchCount: number,
+): string {
+  return [
+    'profileBundle',
+    platform,
+    normalizeCacheSegment(gameName),
+    normalizeCacheSegment(tagLine),
+    matchCount,
+  ].join(':')
+}
+
+function matchCacheKey(platform: PlatformRegion, matchId: string): string {
+  return ['match', REGIONAL_BY_PLATFORM[platform], encodeURIComponent(matchId)].join(':')
+}
+
+async function getOrSetCached<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
+  const cached = riotCache.get<T>(key)
+  if (cached !== null) {
+    return cached
+  }
+
+  const inFlight = inFlightCacheReads.get(key) as Promise<T> | undefined
+  if (inFlight) {
+    return inFlight
+  }
+
+  const request = loader()
+    .then((value) => {
+      riotCache.set(key, value, ttlMs)
+      return value
+    })
+    .finally(() => {
+      inFlightCacheReads.delete(key)
+    })
+
+  inFlightCacheReads.set(key, request)
+  return request
+}
+
 export type RiotAccount = {
   puuid: string
   gameName: string
@@ -242,41 +334,45 @@ export function getMatchById(
   matchId: string,
   apiKey: string,
 ): Promise<RiotMatch> {
-  const host = regionalHost(platform)
-  const path = `/lol/match/v5/matches/${encodeURIComponent(matchId)}`
-  return riotRequest<RiotMatch>(host, path, apiKey)
+  return getOrSetCached(matchCacheKey(platform, matchId), CACHE_TTL.match, () => {
+    const host = regionalHost(platform)
+    const path = `/lol/match/v5/matches/${encodeURIComponent(matchId)}`
+    return riotRequest<RiotMatch>(host, path, apiKey)
+  })
 }
 
 /** Latest Data Dragon version — used to resolve profile icon URLs. */
 export async function getLatestDataDragonVersion(): Promise<string> {
-  const versions = await new Promise<string[]>((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: 'ddragon.leagueoflegends.com',
-        path: '/api/versions.json',
-        method: 'GET',
-        timeout: 10_000,
-      },
-      (res) => {
-        const chunks: Buffer[] = []
-        res.on('data', (chunk: Buffer) => chunks.push(chunk))
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')) as string[])
-          } catch (err) {
-            reject(err)
-          }
-        })
-      },
-    )
-    req.on('timeout', () => {
-      req.destroy()
-      reject(new Error('Data Dragon request timed out'))
+  return getOrSetCached('ddragon:latestVersion', CACHE_TTL.dataDragonVersion, async () => {
+    const versions = await new Promise<string[]>((resolve, reject) => {
+      const req = https.request(
+        {
+          hostname: 'ddragon.leagueoflegends.com',
+          path: '/api/versions.json',
+          method: 'GET',
+          timeout: 10_000,
+        },
+        (res) => {
+          const chunks: Buffer[] = []
+          res.on('data', (chunk: Buffer) => chunks.push(chunk))
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')) as string[])
+            } catch (err) {
+              reject(err)
+            }
+          })
+        },
+      )
+      req.on('timeout', () => {
+        req.destroy()
+        reject(new Error('Data Dragon request timed out'))
+      })
+      req.on('error', reject)
+      req.end()
     })
-    req.on('error', reject)
-    req.end()
+    return versions[0] ?? '14.1.1'
   })
-  return versions[0] ?? '14.1.1'
 }
 
 export type RiotProfileBundle = {
@@ -299,20 +395,25 @@ export async function getSummonerBundle(
   apiKey: string,
   matchCount = 5,
 ): Promise<RiotProfileBundle> {
-  const account = await getAccountByRiotId(platform, gameName, tagLine, apiKey)
-  const summoner = await getSummonerByPuuid(platform, account.puuid, apiKey)
+  const normalizedMatchCount = Math.max(0, Math.floor(matchCount))
+  const cacheKey = profileBundleCacheKey(platform, gameName, tagLine, normalizedMatchCount)
 
-  const [league, matchIds, dataDragonVersion] = await Promise.all([
-    getLeagueEntriesByPuuid(platform, account.puuid, apiKey).catch(() => [] as RiotLeagueEntry[]),
-    getMatchIdsByPuuid(platform, account.puuid, apiKey, matchCount).catch(() => [] as string[]),
-    getLatestDataDragonVersion().catch(() => '14.1.1'),
-  ])
+  return getOrSetCached(cacheKey, CACHE_TTL.profileBundle, async () => {
+    const account = await getAccountByRiotId(platform, gameName, tagLine, apiKey)
+    const summoner = await getSummonerByPuuid(platform, account.puuid, apiKey)
 
-  const matches = (
-    await Promise.all(
-      matchIds.map((id) => getMatchById(platform, id, apiKey).catch(() => null)),
-    )
-  ).filter((m): m is RiotMatch => m !== null)
+    const [league, matchIds, dataDragonVersion] = await Promise.all([
+      getLeagueEntriesByPuuid(platform, account.puuid, apiKey).catch(() => [] as RiotLeagueEntry[]),
+      getMatchIdsByPuuid(platform, account.puuid, apiKey, normalizedMatchCount).catch(() => [] as string[]),
+      getLatestDataDragonVersion().catch(() => '14.1.1'),
+    ])
 
-  return { account, summoner, league, matches, dataDragonVersion }
+    const matches = (
+      await Promise.all(
+        matchIds.map((id) => getMatchById(platform, id, apiKey).catch(() => null)),
+      )
+    ).filter((m): m is RiotMatch => m !== null)
+
+    return { account, summoner, league, matches, dataDragonVersion }
+  })
 }

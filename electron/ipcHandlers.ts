@@ -1,4 +1,4 @@
-import { app, desktopCapturer, ipcMain } from 'electron'
+import { app, desktopCapturer, ipcMain, shell } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -129,6 +129,16 @@ function runFfmpegExport(params: ExportParams & { outputPath: string }): Promise
 }
 
 export function registerIpcHandlers() {
+  ipcMain.handle('open-external-url', async (_event, url: string): Promise<boolean> => {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:') {
+      throw new Error('Only HTTPS URLs can be opened externally.')
+    }
+
+    await shell.openExternal(parsed.toString())
+    return true
+  })
+
   ipcMain.handle('get-desktop-sources', async () => {
     const sources = await desktopCapturer.getSources({
       types: ['window', 'screen'],

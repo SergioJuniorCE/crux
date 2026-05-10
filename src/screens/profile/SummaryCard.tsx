@@ -79,7 +79,7 @@ export function SummaryCard({ stats }: { stats: Aggregates }) {
 }
 
 function WinRateRing({ wr, wins, losses }: { wr: number; wins: number; losses: number }) {
-  const radius = 26
+  const radius = 32
   const circumference = 2 * Math.PI * radius
   const dash = (wr / 100) * circumference
   const color = wr >= 60 ? 'stroke-emerald-400' : wr >= 50 ? 'stroke-primary' : 'stroke-red-400'

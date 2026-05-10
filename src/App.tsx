@@ -47,20 +47,20 @@ function App() {
   // When the League client is running, prefer its identity over whatever
   // the user typed into Settings. The API key always comes from user
   // settings (or the RIOT_API_KEY env var in main).
+  const lcuGameName = lcu.data?.summoner.gameName || lcu.data?.summoner.displayName;
+  const lcuTagLine = lcu.data?.summoner.tagLine;
+  const lcuPlatform = lcu.data?.platform;
   const effectiveRiotSettings = useMemo<RiotSettings>(() => {
-    if (lcu.isLive && lcu.data) {
+    if (lcu.isLive) {
       return {
         ...riotSettings,
-        gameName:
-          lcu.data.summoner.gameName ||
-          lcu.data.summoner.displayName ||
-          riotSettings.gameName,
-        tagLine: lcu.data.summoner.tagLine || riotSettings.tagLine,
-        platform: lcu.data.platform ?? riotSettings.platform,
+        gameName: lcuGameName || riotSettings.gameName,
+        tagLine: lcuTagLine || riotSettings.tagLine,
+        platform: lcuPlatform ?? riotSettings.platform,
       };
     }
     return riotSettings;
-  }, [lcu.isLive, lcu.data, riotSettings]);
+  }, [lcu.isLive, lcuGameName, lcuPlatform, lcuTagLine, riotSettings]);
 
   const summoner = useSummoner(effectiveRiotSettings, {
     matchCount: 15,
@@ -257,11 +257,12 @@ function OtherPlayerProfileRoute({
   );
 
   const summoner = useSummoner(targetSettings, { matchCount: 15, hasEnvKey });
+  const refetchSummoner = summoner.refetch;
   const configured = isRiotConfigured(targetSettings, { hasEnvKey });
 
   const refresh = useCallback(() => {
-    void summoner.refetch();
-  }, [summoner]);
+    void refetchSummoner();
+  }, [refetchSummoner]);
 
   const handleSelectPlayer = useCallback(
     (nextGameName: string, nextTagLine: string) => {

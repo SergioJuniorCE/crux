@@ -25,11 +25,6 @@ export function PageHeader({
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {isViewingOther ? 'Player profile' : 'Profile'}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isViewingOther
-            ? 'Viewing another summoner. Click any player in a match to jump to their profile.'
-            : 'Your Riot account, ranked standings, and recent matches.'}
-        </p>
       </div>
       {right}
     </div>
