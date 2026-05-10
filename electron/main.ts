@@ -68,6 +68,13 @@ protocol.registerSchemesAsPrivileged([
 
 let win: BrowserWindow | null
 
+const DEFAULT_WINDOW_BOUNDS = {
+  width: 1280,
+  height: 800,
+  minWidth: 1024,
+  minHeight: 640,
+}
+
 function emitGameStatus(active: boolean) {
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send('game-status', { active })
@@ -81,6 +88,7 @@ const gamePoller = createGamePoller((active) => {
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    ...DEFAULT_WINDOW_BOUNDS,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
