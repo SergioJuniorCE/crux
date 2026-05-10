@@ -77,14 +77,9 @@ export function useSummoner(settings: RiotSettings, options: UseSummonerOptions 
           lastFetchedAt: Date.now(),
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       if (reqId !== requestIdRef.current) return
-      setState({
-        status: 'error',
-        data: null,
-        error: err instanceof Error ? err.message : String(err),
-        lastFetchedAt: Date.now(),
-      })
+      setState({ status: 'error', data: null, error: err.message || String(err), lastFetchedAt: Date.now() })
     }
   }, [apiKey, gameName, hasEnvKey, matchCount, platform, tagLine])
 

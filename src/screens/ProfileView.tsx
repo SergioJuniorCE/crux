@@ -240,7 +240,6 @@ export function ProfileView({
         }
       />
 
-      {/* Hero */}
       <section className="relative overflow-hidden rounded-xl border border-border bg-card p-6">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary/40" />
         <div className="flex flex-wrap items-center gap-5">
@@ -298,7 +297,6 @@ export function ProfileView({
         </div>
       </section>
 
-      {/* Two-column layout: sidebar + matches */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <aside className="flex flex-col gap-3">
           {soloEntry ? (

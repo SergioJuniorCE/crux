@@ -367,31 +367,20 @@ export async function getCurrentSummonerFromClient(): Promise<CurrentSummonerPay
   // Region/locale is best-effort — failures here shouldn't block the lookup.
   let platform: PlatformRegion | null = null
   let regionCode: string | null = null
-  try {
-    const region = await lcuRequest<LcuRegionLocale>(creds, '/riotclient/region-locale')
-    const candidates = [
-      region.region,
-      region.webRegion,
-      chatMe?.lol?.region,
-      chatMe?.lol?.platformId,
-    ]
-    for (const candidate of candidates) {
-      const normalized = normalizeRegion(candidate)
-      if (normalized) {
-        regionCode = cleanString(candidate).toUpperCase()
-        platform = normalized
-        break
-      }
-    }
-  } catch {
-    const candidates = [chatMe?.lol?.region, chatMe?.lol?.platformId]
-    for (const candidate of candidates) {
-      const normalized = normalizeRegion(candidate)
-      if (normalized) {
-        regionCode = cleanString(candidate).toUpperCase()
-        platform = normalized
-        break
-      }
+  const region = await lcuRequest<LcuRegionLocale>(creds, '/riotclient/region-locale').catch(() => null)
+  const candidates = [
+    region?.region,
+    region?.webRegion,
+    chatMe?.lol?.region,
+    chatMe?.lol?.platformId,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = normalizeRegion(candidate)
+    if (normalized) {
+      regionCode = cleanString(candidate).toUpperCase()
+      platform = normalized
+      break
     }
   }
 

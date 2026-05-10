@@ -8,17 +8,31 @@ export const FPS_OPTIONS = [30, 60, 120] as const
 export type FrameRateOption = (typeof FPS_OPTIONS)[number]
 
 export type RecorderSettings = {
+  enabled: boolean
   resolution: ResolutionOption
   frameRate: FrameRateOption
   maxVideoCount: number
   maxFolderSizeGB: number
 }
 
+export type RecorderDeviceProfile = RecorderSettings & {
+  id: string
+  name: string
+}
+
+export type RecorderSettingsStore = {
+  activeProfileId: string
+  profiles: RecorderDeviceProfile[]
+}
+
 export const SETTINGS_STORAGE_KEY = 'crux-settings'
 
 export const DEFAULT_SETTINGS: RecorderSettings = {
+  enabled: true,
   resolution: '1920x1080',
   frameRate: 60,
   maxVideoCount: 20,
   maxFolderSizeGB: 10,
 }
+
+export const DEFAULT_DEVICE_PROFILE_NAME = 'This device'

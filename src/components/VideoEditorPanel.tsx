@@ -126,7 +126,6 @@ export function VideoEditorPanel({ src, filePath, onExportDone }: Props) {
 
   return (
     <div className="flex h-full flex-col gap-3">
-      {/* Video */}
       <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-lg bg-black min-h-0 ring-1 ring-white/5">
         {videoLoading && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black">
@@ -153,7 +152,6 @@ export function VideoEditorPanel({ src, filePath, onExportDone }: Props) {
         />
       </div>
 
-      {/* Timeline */}
       <div
         ref={trackRef}
         onClick={handleTrackClick}
@@ -225,7 +223,6 @@ export function VideoEditorPanel({ src, filePath, onExportDone }: Props) {
 
         <div className="flex-1" />
 
-        {/* Speed presets */}
         <div className="flex items-center gap-0.5 rounded-md border border-border bg-background/30 p-0.5">
           {SPEED_PRESETS.map((s) => (
             <button
@@ -244,7 +241,6 @@ export function VideoEditorPanel({ src, filePath, onExportDone }: Props) {
         </div>
       </div>
 
-      {/* Markers + Export */}
       <div className="flex items-center gap-2 border-t border-border pt-2.5">
         <button
           onClick={() => setInPoint(currentTime)}

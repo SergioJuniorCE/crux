@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { RecorderSettings, RecordingState } from '../types/recorder'
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function useLeagueRecorder(settings: RecorderSettings) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -37,6 +41,12 @@ export function useLeagueRecorder(settings: RecorderSettings) {
 
   const startRecording = useCallback(async () => {
     if (recorderRef.current?.state === 'recording') {
+      return
+    }
+
+    if (!settings.enabled) {
+      setRecordingState('idle')
+      setErrorMessage(null)
       return
     }
 
@@ -122,9 +132,8 @@ export function useLeagueRecorder(settings: RecorderSettings) {
           })
           setLastSavedPath(savedPath)
           setRecordingState('saved')
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to save recording.'
-          setErrorMessage(message)
+        } catch (error: unknown) {
+          setErrorMessage(getErrorMessage(error, 'Failed to save recording.'))
           setRecordingState('error')
         } finally {
           chunksRef.current = []
@@ -149,14 +158,21 @@ export function useLeagueRecorder(settings: RecorderSettings) {
         const elapsed = Math.floor((Date.now() - startedAt) / 1000)
         setElapsedSeconds(elapsed)
       }, 1000)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to start recording.'
-      setErrorMessage(message)
+    } catch (error: unknown) {
+      setErrorMessage(getErrorMessage(error, 'Failed to start recording.'))
       setRecordingState('error')
       clearTimer()
       releaseStream()
     }
-  }, [clearTimer, releaseStream, settings.frameRate, settings.maxFolderSizeGB, settings.maxVideoCount, settings.resolution])
+  }, [
+    clearTimer,
+    releaseStream,
+    settings.enabled,
+    settings.frameRate,
+    settings.maxFolderSizeGB,
+    settings.maxVideoCount,
+    settings.resolution,
+  ])
 
   useEffect(() => {
     return () => {
