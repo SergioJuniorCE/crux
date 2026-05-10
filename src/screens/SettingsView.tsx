@@ -132,8 +132,8 @@ export function SettingsView({
       } else {
         setDetectError(result.error);
       }
-    } catch (err) {
-      setDetectError(err instanceof Error ? err.message : String(err));
+    } catch (err: any) {
+      setDetectError(err.message || String(err));
     } finally {
       setDetecting(false);
     }
@@ -160,7 +160,6 @@ export function SettingsView({
         description="Used to fetch your summoner profile, rank, and match history."
       >
         <div className="flex flex-col gap-5">
-          {/* Auto-detect from running League client */}
           <div className="rounded-lg border border-dashed border-border bg-background/30 px-4 py-3">
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

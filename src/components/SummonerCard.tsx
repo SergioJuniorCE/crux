@@ -184,7 +184,6 @@ export function SummonerCard({ status, data, error, onRefresh, onGoToSettings, c
 
   return (
     <section className="rounded-xl border border-border bg-card p-5">
-      {/* Header: identity */}
       <div className="flex flex-wrap items-start gap-4">
         <div className="relative shrink-0">
           <img
@@ -236,7 +235,6 @@ export function SummonerCard({ status, data, error, onRefresh, onGoToSettings, c
         <p className="mt-4 text-xs text-muted-foreground">Unranked this season.</p>
       )}
 
-      {/* Recent matches */}
       {matches.length > 0 && (
         <div className="mt-5">
           <div className="mb-2 flex items-center gap-2">

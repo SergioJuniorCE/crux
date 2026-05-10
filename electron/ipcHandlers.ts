@@ -71,7 +71,7 @@ function remuxForSeekability(filePath: string): Promise<void> {
       .outputOptions(['-c', 'copy'])
       .output(tempPath)
       .on('error', async (err: Error) => {
-        try { await fs.unlink(tempPath) } catch { /* ignore */ }
+        await fs.unlink(tempPath).catch(() => {})
         reject(err)
       })
       .on('end', async () => {
@@ -163,13 +163,9 @@ export function registerIpcHandlers() {
       const data = Buffer.from(new Uint8Array(recordingBuffer))
       await fs.writeFile(filePath, data)
 
-      // Remux to add seek index (Cues) and fix duration — MediaRecorder writes
-      // a streaming WebM that is unseekable in all players without this step.
-      try {
-        await remuxForSeekability(filePath)
-      } catch (err) {
+      await remuxForSeekability(filePath).catch((err) => {
         console.error('Remux failed, keeping original (file may be unseekable):', err)
-      }
+      })
 
       const allFiles = await fs.readdir(recordingsDir)
       const recordings = await Promise.all(
@@ -189,12 +185,8 @@ export function registerIpcHandlers() {
 
       while (recordings.length > 0 && (recordings.length > limits.maxCount || totalSize > maxSizeBytes)) {
         const oldest = recordings.shift()!
-        try {
-          await fs.unlink(oldest.path)
-          totalSize -= oldest.size
-        } catch {
-          // file may have already been removed
-        }
+        await fs.unlink(oldest.path).catch(() => {})
+        totalSize -= oldest.size
       }
 
       return filePath
@@ -233,7 +225,7 @@ export function registerIpcHandlers() {
     try {
       await fs.unlink(filePath)
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete recording:', error)
       return false
     }
@@ -248,13 +240,12 @@ export function registerIpcHandlers() {
     async (): Promise<
       { success: true; data: CurrentSummonerPayload } | { success: false; error: string }
     > => {
-      try {
-        const data = await getCurrentSummonerFromClient()
-        return { success: true, data }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        return { success: false, error: message }
-      }
+    try {
+      const data = await getCurrentSummonerFromClient()
+      return { success: true, data }
+    } catch (err: any) {
+      return { success: false, error: err.message || String(err) }
+    }
     },
   )
 
@@ -288,12 +279,9 @@ export function registerIpcHandlers() {
       try {
         const data = await getSummonerBundle(platform, gameName, tagLine, apiKey, matchCount ?? 5)
         return { success: true, data }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err)
-        const status =
-          typeof err === 'object' && err !== null && 'status' in err
-            ? Number((err as { status: number }).status)
-            : undefined
+      } catch (err: any) {
+        const message = err.message || String(err)
+        const status = err.status ? Number(err.status) : undefined
         console.error('Riot API error:', message)
         return { success: false, error: message, status }
       }
@@ -335,34 +323,22 @@ export function registerIpcHandlers() {
     const outputName = `crux-edit-${Date.now()}.webm`
     const outputPath = path.join(recordingsDir, outputName)
 
-    try {
-      await runFfmpegExport({
-        sourcePath: normalizedSource,
-        startSec,
-        endSec,
-        speedMultiplier: speed,
-        outputPath,
-      })
-
-      const stats = await fs.stat(outputPath)
-      return {
-        success: true,
-        session: {
-          filename: outputName,
-          path: outputPath,
-          size: stats.size,
-          createdAt: stats.birthtimeMs || stats.mtimeMs,
-        },
-      }
-    } catch (err) {
-      // Clean up partial output if it exists
       try {
-        await fs.unlink(outputPath)
-      } catch {
-        // ignore
+        await runFfmpegExport({ sourcePath: normalizedSource, startSec, endSec, speedMultiplier: speed, outputPath })
+        const stats = await fs.stat(outputPath)
+        return {
+          success: true,
+          session: {
+            filename: outputName,
+            path: outputPath,
+            size: stats.size,
+            createdAt: stats.birthtimeMs || stats.mtimeMs,
+          },
+        }
+      } catch (err) {
+        await fs.unlink(outputPath).catch(() => {})
+        console.error('FFmpeg export error:', err)
+        return { success: false, error: String(err) }
       }
-      console.error('FFmpeg export error:', err)
-      return { success: false, error: String(err) }
-    }
   })
 }

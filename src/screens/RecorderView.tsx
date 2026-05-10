@@ -136,7 +136,6 @@ export function RecorderView({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Hero status card */}
       <section className="relative overflow-hidden rounded-xl border border-border bg-card p-6">
         <div
           className={cn(
@@ -185,7 +184,6 @@ export function RecorderView({
         </div>
       </section>
 
-      {/* Summoner profile */}
       <SummonerCard
         status={summonerStatus}
         data={summonerData}
@@ -195,7 +193,6 @@ export function RecorderView({
         onGoToSettings={onOpenRiotSettings}
       />
 
-      {/* Error strip */}
       {errorMessage && (
         <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
@@ -203,7 +200,6 @@ export function RecorderView({
         </div>
       )}
 
-      {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label="Resolution"
@@ -241,7 +237,6 @@ export function RecorderView({
         </span>
       </div>
 
-      {/* Last saved path, if any */}
       {lastSavedPath && recordingState === "saved" && (
         <div className="rounded-md border border-border bg-card px-3 py-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">

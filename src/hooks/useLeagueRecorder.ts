@@ -122,9 +122,8 @@ export function useLeagueRecorder(settings: RecorderSettings) {
           })
           setLastSavedPath(savedPath)
           setRecordingState('saved')
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to save recording.'
-          setErrorMessage(message)
+        } catch (error: any) {
+          setErrorMessage(error.message || 'Failed to save recording.')
           setRecordingState('error')
         } finally {
           chunksRef.current = []
@@ -149,9 +148,8 @@ export function useLeagueRecorder(settings: RecorderSettings) {
         const elapsed = Math.floor((Date.now() - startedAt) / 1000)
         setElapsedSeconds(elapsed)
       }, 1000)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to start recording.'
-      setErrorMessage(message)
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to start recording.')
       setRecordingState('error')
       clearTimer()
       releaseStream()

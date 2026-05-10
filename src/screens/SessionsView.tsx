@@ -81,7 +81,6 @@ export function SessionsView() {
 
   return (
     <div className="flex h-[calc(100vh-116px)] gap-4">
-      {/* Sidebar */}
       <aside className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
           <div className="flex items-center gap-2">
@@ -171,7 +170,6 @@ export function SessionsView() {
         </div>
       </aside>
 
-      {/* Player / Editor */}
       <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
         {selected && videoSrc ? (
           <>

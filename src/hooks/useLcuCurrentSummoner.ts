@@ -72,11 +72,11 @@ export function useLcuCurrentSummoner(options: Options = {}) {
           lastCheckedAt: Date.now(),
         }))
       }
-    } catch (err) {
+    } catch (err: any) {
       setState((prev) => ({
         status: 'unavailable',
         data: prev.data,
-        error: err instanceof Error ? err.message : String(err),
+        error: err.message || String(err),
         lastCheckedAt: Date.now(),
       }))
     } finally {
