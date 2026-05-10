@@ -129,10 +129,16 @@
     font-feature-settings: "ss01", "cv11", "tnum";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: var(--background);
   }
   body {
     @apply bg-background text-foreground;
+    min-height: 100vh;
     font-family: var(--font-sans);
+  }
+  #root {
+    min-height: 100vh;
+    background: var(--background);
   }
   .font-mono,
   code,
