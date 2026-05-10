@@ -16,6 +16,11 @@ export function ddragonItem(version: string, itemId: number) {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
 }
 
+export function rankedEmblem(tier: string) {
+  const normalized = tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase()
+  return `/ranked-emblems/Season_2023_-_${normalized}.png`
+}
+
 /**
  * Community Dragon hosts summoner spell icons by numeric id directly — much
  * simpler than DataDragon which requires resolving id → spell key via

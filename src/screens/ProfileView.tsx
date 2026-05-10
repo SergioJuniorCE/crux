@@ -14,6 +14,7 @@ import type { RiotProfileBundle } from "../types/riot";
 import { REGION_LABELS, type PlatformRegion } from "../types/riot";
 import { PlayerSearch } from "@/components/PlayerSearch";
 import { useErrorToast } from "@/hooks/useErrorToast";
+import { useRankedLpHistory } from "@/hooks/useRankedLpHistory";
 import {
   QUEUE_FILTERS,
   ddragonProfileIcon,
@@ -71,6 +72,7 @@ export function ProfileView({
   onBackToOwn,
 }: ProfileViewProps) {
   const [queueFilter, setQueueFilter] = useState<QueueGroup | "all">("all");
+  const rankedLpHistory = useRankedLpHistory(data);
 
   useErrorToast({
     error,
@@ -300,7 +302,11 @@ export function ProfileView({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <aside className="flex flex-col gap-3">
           {soloEntry ? (
-            <RankedPanel entry={soloEntry} icon={<Trophy size={14} />} />
+            <RankedPanel
+              entry={soloEntry}
+              icon={<Trophy size={14} />}
+              lpHistory={rankedLpHistory}
+            />
           ) : (
             <EmptyRankedPanel
               label="Ranked Solo / Duo"
@@ -308,7 +314,11 @@ export function ProfileView({
             />
           )}
           {flexEntry ? (
-            <RankedPanel entry={flexEntry} icon={<Shield size={14} />} />
+            <RankedPanel
+              entry={flexEntry}
+              icon={<Shield size={14} />}
+              lpHistory={rankedLpHistory}
+            />
           ) : (
             <EmptyRankedPanel label="Ranked Flex" icon={<Shield size={14} />} />
           )}
