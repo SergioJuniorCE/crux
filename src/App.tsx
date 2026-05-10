@@ -167,7 +167,7 @@ function App() {
           />
         }
       >
-        <SidebarInset className="bg-background text-foreground">
+        <SidebarInset className="max-h-svh overflow-y-auto bg-background text-foreground">
           <TopBar
             current={{
               gameName: effectiveRiotSettings.gameName,
