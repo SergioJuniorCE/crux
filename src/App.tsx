@@ -29,7 +29,15 @@ import { Toaster } from "./components/ui/sonner";
 
 function App() {
   const gameActive = useGameStatus();
-  const { settings, setSettings } = useRecorderSettings();
+  const {
+    settings,
+    recorderProfiles,
+    activeRecorderProfileId,
+    setActiveRecorderProfileId,
+    updateRecorderProfile,
+    addRecorderProfile,
+    removeRecorderProfile,
+  } = useRecorderSettings();
   const { settings: riotSettings, setSettings: setRiotSettings } =
     useRiotSettings();
   const { hasEnvKey } = useRiotEnvStatus();
@@ -82,13 +90,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (gameActive) {
+    if (gameActive && settings.enabled) {
       void startRecording();
       return;
     }
 
     stopRecording();
-  }, [gameActive, startRecording, stopRecording]);
+  }, [gameActive, settings.enabled, startRecording, stopRecording]);
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground">
@@ -165,8 +173,12 @@ function App() {
               path="/settings"
               element={
                 <SettingsView
-                  settings={settings}
-                  onSettingsChange={setSettings}
+                  recorderProfiles={recorderProfiles}
+                  activeRecorderProfileId={activeRecorderProfileId}
+                  onActiveRecorderProfileChange={setActiveRecorderProfileId}
+                  onRecorderProfileChange={updateRecorderProfile}
+                  onAddRecorderProfile={addRecorderProfile}
+                  onRemoveRecorderProfile={removeRecorderProfile}
                   riotSettings={riotSettings}
                   onRiotSettingsChange={setRiotSettings}
                   hasEnvRiotKey={hasEnvKey}

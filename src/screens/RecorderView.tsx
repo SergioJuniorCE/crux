@@ -5,6 +5,7 @@ import {
   Gauge,
   HardDrive,
   Monitor,
+  Power,
   Save,
 } from "lucide-react";
 
@@ -72,25 +73,30 @@ export function RecorderView({
 }: RecorderViewProps) {
   const isRecording = recordingState === "recording";
   const isSaving = recordingState === "saving";
-  const heroLabel = isRecording
-    ? "Recording active match"
-    : isSaving
-      ? "Saving last recording"
-      : gameActive
-        ? "Game detected"
-        : "Waiting for a match";
+  const recorderEnabled = settings.enabled;
+  const heroLabel = !recorderEnabled
+    ? "Recording disabled on this device"
+    : isRecording
+      ? "Recording active match"
+      : isSaving
+        ? "Saving last recording"
+        : gameActive
+          ? "Game detected"
+          : "Waiting for a match";
 
-  const heroSub = isRecording
-    ? "Capturing gameplay. Recording will stop and save automatically when the game ends."
-    : isSaving
-      ? "Encoding and writing the video file to disk."
-      : gameActive
-        ? "Client is in an active match. Starting capture shortly."
-        : "Crux is listening. Start a League of Legends match to begin recording.";
+  const heroSub = !recorderEnabled
+    ? "This profile will skip match recording until you enable it in Settings."
+    : isRecording
+      ? "Capturing gameplay. Recording will stop and save automatically when the game ends."
+      : isSaving
+        ? "Encoding and writing the video file to disk."
+        : gameActive
+          ? "Client is in an active match. Starting capture shortly."
+          : "Crux is listening. Start a League of Legends match to begin recording.";
 
   const dotClass = isRecording
     ? "bg-red-500 crux-pulse-red"
-    : gameActive
+    : gameActive && recorderEnabled
       ? "bg-primary crux-pulse-gold"
       : "bg-zinc-500";
 
@@ -142,7 +148,7 @@ export function RecorderView({
             "pointer-events-none absolute inset-x-0 top-0 h-px",
             isRecording
               ? "bg-red-500/60"
-              : gameActive
+              : gameActive && recorderEnabled
                 ? "bg-primary/60"
                 : "bg-white/10",
           )}
@@ -200,7 +206,14 @@ export function RecorderView({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <StatCard
+          label="Recorder"
+          value={recorderEnabled ? "On" : "Off"}
+          sub={recorderEnabled ? "Enabled here" : "Disabled here"}
+          icon={<Power size={13} />}
+          valueClassName={recorderEnabled ? "text-emerald-300" : "text-zinc-400"}
+        />
         <StatCard
           label="Resolution"
           value={settings.resolution}
@@ -232,8 +245,8 @@ export function RecorderView({
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Clock size={12} />
         <span>
-          Recording only runs during an active match — the client alone will not
-          trigger capture.
+          Recording only runs when this device profile is enabled and a League
+          match is active.
         </span>
       </div>
 

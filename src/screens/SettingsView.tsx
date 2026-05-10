@@ -7,18 +7,22 @@ import {
   Eye,
   EyeOff,
   HardDrive,
+  Laptop,
   Loader2,
   Moon,
   Palette,
+  Plus,
+  Power,
   Sparkles,
   Sun,
+  Trash2,
   UserCircle2,
 } from "lucide-react";
 
 import {
   FPS_OPTIONS,
   RESOLUTION_OPTIONS,
-  type RecorderSettings,
+  type RecorderDeviceProfile,
   type ResolutionOption,
   type FrameRateOption,
 } from "../types/recorder";
@@ -33,10 +37,15 @@ import { cn } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 
 type SettingsViewProps = {
-  settings: RecorderSettings;
-  onSettingsChange: (
-    updater: (current: RecorderSettings) => RecorderSettings,
+  recorderProfiles: RecorderDeviceProfile[];
+  activeRecorderProfileId: string;
+  onActiveRecorderProfileChange: (profileId: string) => void;
+  onRecorderProfileChange: (
+    profileId: string,
+    updater: (current: RecorderDeviceProfile) => RecorderDeviceProfile,
   ) => void;
+  onAddRecorderProfile: () => string;
+  onRemoveRecorderProfile: (profileId: string) => void;
   riotSettings: RiotSettings;
   onRiotSettingsChange: (
     updater: (current: RiotSettings) => RiotSettings,
@@ -93,9 +102,17 @@ function FieldRow({
   );
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function SettingsView({
-  settings,
-  onSettingsChange,
+  recorderProfiles,
+  activeRecorderProfileId,
+  onActiveRecorderProfileChange,
+  onRecorderProfileChange,
+  onAddRecorderProfile,
+  onRemoveRecorderProfile,
   riotSettings,
   onRiotSettingsChange,
   hasEnvRiotKey,
@@ -106,8 +123,28 @@ export function SettingsView({
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState<string | null>(null);
   const [detectSuccessAt, setDetectSuccessAt] = useState<number | null>(null);
+  const [selectedRecorderProfileId, setSelectedRecorderProfileId] = useState(
+    activeRecorderProfileId,
+  );
   const hasUiKey = Boolean(riotSettings.apiKey);
   const envKeyActive = hasEnvRiotKey && !hasUiKey;
+  const selectedRecorderProfile =
+    recorderProfiles.find(
+      (profile) => profile.id === selectedRecorderProfileId,
+    ) ??
+    recorderProfiles.find((profile) => profile.id === activeRecorderProfileId) ??
+    recorderProfiles[0];
+  const selectedProfileIsActive =
+    selectedRecorderProfile?.id === activeRecorderProfileId;
+  const canRemoveSelectedProfile =
+    Boolean(selectedRecorderProfile) && recorderProfiles.length > 1;
+
+  const updateSelectedRecorderProfile = (
+    updater: (current: RecorderDeviceProfile) => RecorderDeviceProfile,
+  ) => {
+    if (!selectedRecorderProfile) return;
+    onRecorderProfileChange(selectedRecorderProfile.id, updater);
+  };
 
   useErrorToast({
     error: detectError,
@@ -132,8 +169,8 @@ export function SettingsView({
       } else {
         setDetectError(result.error);
       }
-    } catch (err: any) {
-      setDetectError(err.message || String(err));
+    } catch (err: unknown) {
+      setDetectError(getErrorMessage(err));
     } finally {
       setDetecting(false);
     }
@@ -142,6 +179,18 @@ export function SettingsView({
   useEffect(() => {
     if (!detectSuccessAt) return;
   }, [detectSuccessAt]);
+
+  useEffect(() => {
+    if (
+      recorderProfiles.some(
+        (profile) => profile.id === selectedRecorderProfileId,
+      )
+    ) {
+      return;
+    }
+
+    setSelectedRecorderProfileId(activeRecorderProfileId);
+  }, [activeRecorderProfileId, recorderProfiles, selectedRecorderProfileId]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -367,38 +416,195 @@ export function SettingsView({
 
       <SectionCard
         icon={<Camera size={15} />}
-        title="Capture"
-        description="Resolution and frame rate used when recording a match."
+        title="Recorder devices"
+        description="Use a different recording profile on each computer."
       >
         <div className="flex flex-col gap-5">
-          <FieldRow label="Resolution" hint="Video output size">
-            <Segmented<ResolutionOption>
-              options={RESOLUTION_OPTIONS.map((r) => ({ value: r, label: r }))}
-              value={settings.resolution}
-              onChange={(value) =>
-                onSettingsChange((current) => ({
-                  ...current,
-                  resolution: value,
-                }))
-              }
-            />
-          </FieldRow>
+          <div className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="flex flex-col gap-2">
+              {recorderProfiles.map((profile) => {
+                const selected = profile.id === selectedRecorderProfile?.id;
+                const active = profile.id === activeRecorderProfileId;
+                return (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => setSelectedRecorderProfileId(profile.id)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
+                      selected
+                        ? "border-primary/45 bg-primary/10"
+                        : "border-border bg-background/30 hover:border-white/15",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                        profile.enabled
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : "bg-white/[0.04] text-muted-foreground",
+                      )}
+                    >
+                      <Laptop size={14} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {profile.name}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        {active ? "Active here" : "Saved profile"}
+                        <span className="text-muted-foreground/40">·</span>
+                        {profile.enabled ? "Recorder on" : "Recorder off"}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
 
-          <FieldRow label="Frame rate" hint="Frames captured per second">
-            <Segmented<FrameRateOption>
-              options={FPS_OPTIONS.map((f) => ({
-                value: f,
-                label: `${f} fps`,
-              }))}
-              value={settings.frameRate}
-              onChange={(value) =>
-                onSettingsChange((current) => ({
-                  ...current,
-                  frameRate: value,
-                }))
-              }
-            />
-          </FieldRow>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = onAddRecorderProfile();
+                  setSelectedRecorderProfileId(id);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-dashed border-border bg-background/20 px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                <Plus size={12} />
+                Add device profile
+              </button>
+            </div>
+
+            {selectedRecorderProfile && (
+              <div className="rounded-lg border border-border bg-background/25 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                      Device name
+                    </span>
+                    <input
+                      type="text"
+                      value={selectedRecorderProfile.name}
+                      onChange={(event) =>
+                        updateSelectedRecorderProfile((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                      className="rounded-md border border-border bg-background/50 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                    />
+                  </label>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!selectedProfileIsActive && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onActiveRecorderProfileChange(
+                            selectedRecorderProfile.id,
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                      >
+                        <Laptop size={12} />
+                        Use here
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={!canRemoveSelectedProfile}
+                      onClick={() => {
+                        const removingId = selectedRecorderProfile.id;
+                        onRemoveRecorderProfile(removingId);
+                        const nextProfile = recorderProfiles.find(
+                          (profile) => profile.id !== removingId,
+                        );
+                        if (nextProfile) {
+                          setSelectedRecorderProfileId(nextProfile.id);
+                        }
+                      }}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-red-500/40 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Remove device profile"
+                      aria-label="Remove device profile"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-4">
+                  <FieldRow
+                    label="Enable recorder"
+                    hint={
+                      selectedProfileIsActive
+                        ? "When off, active League matches will not be captured on this device."
+                        : "This applies when the profile is used on a device."
+                    }
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateSelectedRecorderProfile((current) => ({
+                          ...current,
+                          enabled: !current.enabled,
+                        }))
+                      }
+                      role="switch"
+                      aria-checked={selectedRecorderProfile.enabled}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                        selectedRecorderProfile.enabled
+                          ? "bg-emerald-500"
+                          : "bg-white/10",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex h-5 w-5 transform items-center justify-center rounded-full bg-background shadow transition-transform",
+                          selectedRecorderProfile.enabled
+                            ? "translate-x-5"
+                            : "translate-x-0.5",
+                        )}
+                      >
+                        <Power size={10} className="text-foreground/80" />
+                      </span>
+                    </button>
+                  </FieldRow>
+
+                  <FieldRow label="Resolution" hint="Video output size">
+                    <Segmented<ResolutionOption>
+                      options={RESOLUTION_OPTIONS.map((r) => ({
+                        value: r,
+                        label: r,
+                      }))}
+                      value={selectedRecorderProfile.resolution}
+                      onChange={(value) =>
+                        updateSelectedRecorderProfile((current) => ({
+                          ...current,
+                          resolution: value,
+                        }))
+                      }
+                    />
+                  </FieldRow>
+
+                  <FieldRow label="Frame rate" hint="Frames captured per second">
+                    <Segmented<FrameRateOption>
+                      options={FPS_OPTIONS.map((f) => ({
+                        value: f,
+                        label: `${f} fps`,
+                      }))}
+                      value={selectedRecorderProfile.frameRate}
+                      onChange={(value) =>
+                        updateSelectedRecorderProfile((current) => ({
+                          ...current,
+                          frameRate: value,
+                        }))
+                      }
+                    />
+                  </FieldRow>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </SectionCard>
 
@@ -407,54 +613,56 @@ export function SettingsView({
         title="Storage"
         description="Oldest recordings are automatically deleted when either limit is reached."
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Max videos
-            </span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              className="rounded-md border border-border bg-background/50 px-3 py-2 font-mono text-sm tabular-nums text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              value={settings.maxVideoCount}
-              onChange={(event) => {
-                const value = Math.max(
-                  1,
-                  Math.floor(Number(event.target.value)),
-                );
-                if (!Number.isNaN(value)) {
-                  onSettingsChange((current) => ({
-                    ...current,
-                    maxVideoCount: value,
-                  }));
-                }
-              }}
-            />
-          </label>
+        {selectedRecorderProfile && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Max videos
+              </span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className="rounded-md border border-border bg-background/50 px-3 py-2 font-mono text-sm tabular-nums text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                value={selectedRecorderProfile.maxVideoCount}
+                onChange={(event) => {
+                  const value = Math.max(
+                    1,
+                    Math.floor(Number(event.target.value)),
+                  );
+                  if (!Number.isNaN(value)) {
+                    updateSelectedRecorderProfile((current) => ({
+                      ...current,
+                      maxVideoCount: value,
+                    }));
+                  }
+                }}
+              />
+            </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Max size (GB)
-            </span>
-            <input
-              type="number"
-              min={0.1}
-              step={0.5}
-              className="rounded-md border border-border bg-background/50 px-3 py-2 font-mono text-sm tabular-nums text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              value={settings.maxFolderSizeGB}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                if (!Number.isNaN(value) && value > 0) {
-                  onSettingsChange((current) => ({
-                    ...current,
-                    maxFolderSizeGB: value,
-                  }));
-                }
-              }}
-            />
-          </label>
-        </div>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Max size (GB)
+              </span>
+              <input
+                type="number"
+                min={0.1}
+                step={0.5}
+                className="rounded-md border border-border bg-background/50 px-3 py-2 font-mono text-sm tabular-nums text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                value={selectedRecorderProfile.maxFolderSizeGB}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (!Number.isNaN(value) && value > 0) {
+                    updateSelectedRecorderProfile((current) => ({
+                      ...current,
+                      maxFolderSizeGB: value,
+                    }));
+                  }
+                }}
+              />
+            </label>
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard
