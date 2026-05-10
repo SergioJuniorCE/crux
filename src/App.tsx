@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import type { PanelImperativeHandle, PanelSize } from "react-resizable-panels";
 import {
   Routes,
   Route,
@@ -7,7 +16,18 @@ import {
   useParams,
 } from "react-router-dom";
 
-import { Header } from "./components/Header";
+import { AppSidebar } from "./components/AppSidebar";
+import { TopBar } from "./components/TopBar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  useSidebar,
+} from "./components/ui/sidebar";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "./components/ui/resizable";
 import { RecorderView } from "./screens/RecorderView";
 import { SettingsView } from "./screens/SettingsView";
 import { SessionsView } from "./screens/SessionsView";
@@ -27,7 +47,27 @@ import { useDarkMode } from "./hooks/useDarkMode";
 import { PLATFORM_REGIONS, type PlatformRegion } from "./types/riot";
 import { Toaster } from "./components/ui/sonner";
 
+const SIDEBAR_WIDTH_STORAGE_KEY = "crux:sidebar-width";
+const SIDEBAR_DEFAULT_WIDTH = 256;
+const SIDEBAR_MIN_WIDTH = 208;
+const SIDEBAR_MAX_WIDTH = 340;
+const SIDEBAR_COLLAPSED_WIDTH = 48;
+
+function clampSidebarWidth(value: number) {
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, value));
+}
+
+function getInitialSidebarWidth() {
+  if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH;
+
+  const saved = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+  return Number.isFinite(saved)
+    ? clampSidebarWidth(saved)
+    : SIDEBAR_DEFAULT_WIDTH;
+}
+
 function App() {
+  const [sidebarWidth, setSidebarWidth] = useState(getInitialSidebarWidth);
   const gameActive = useGameStatus();
   const {
     settings,
@@ -77,6 +117,14 @@ function App() {
   const configured = isRiotConfigured(effectiveRiotSettings, { hasEnvKey });
   const location = useLocation();
   const navigate = useNavigate();
+  const setResizableSidebarWidth = useCallback((width: number) => {
+    const nextWidth = clampSidebarWidth(width);
+    setSidebarWidth(nextWidth);
+    window.localStorage.setItem(
+      SIDEBAR_WIDTH_STORAGE_KEY,
+      String(nextWidth),
+    );
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -99,21 +147,45 @@ function App() {
   }, [gameActive, settings.enabled, startRecording, stopRecording]);
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground">
-      <Header
-        gameActive={gameActive}
-        recordingState={recordingState}
-        isDark={isDark}
-        activePlatform={effectiveRiotSettings.platform}
-        onToggleDark={toggleDark}
-      />
+    <SidebarProvider
+      defaultOpen={true}
+      style={
+        {
+          "--sidebar-width": `${sidebarWidth}px`,
+        } as CSSProperties
+      }
+    >
+      <ResizableAppLayout
+        sidebarWidth={sidebarWidth}
+        onSidebarWidthChange={setResizableSidebarWidth}
+        sidebar={
+          <AppSidebar
+            gameActive={gameActive}
+            recordingState={recordingState}
+            isDark={isDark}
+            onToggleDark={toggleDark}
+          />
+        }
+      >
+        <SidebarInset className="bg-background text-foreground">
+          <TopBar
+            current={{
+              gameName: effectiveRiotSettings.gameName,
+              tagLine: effectiveRiotSettings.tagLine,
+              platform: effectiveRiotSettings.platform,
+              profileIconId: summoner.data?.summoner.profileIconId,
+              dataDragonVersion: summoner.data?.dataDragonVersion,
+            }}
+            configured={configured}
+            onSelectOwn={() => navigate("/")}
+          />
 
-      <main className="mx-auto max-w-6xl px-6 py-6">
-        <div
-          key={location.pathname}
-          className="animate-in fade-in-50 slide-in-from-bottom-1 duration-300"
-        >
-          <Routes location={location}>
+          <main className="w-full flex-1 px-6 py-5">
+            <div
+              key={location.pathname}
+              className="animate-in fade-in-50 slide-in-from-bottom-1 duration-300"
+            >
+              <Routes location={location}>
             <Route
               path="/"
               element={
@@ -211,11 +283,93 @@ function App() {
               }
             />
             <Route path="/sessions" element={<SessionsView />} />
-          </Routes>
-        </div>
-      </main>
+              </Routes>
+            </div>
+          </main>
+        </SidebarInset>
+      </ResizableAppLayout>
       <Toaster isDark={isDark} />
-    </div>
+    </SidebarProvider>
+  );
+}
+
+type ResizableAppLayoutProps = {
+  sidebar: ReactNode;
+  sidebarWidth: number;
+  onSidebarWidthChange: (width: number) => void;
+  children: ReactNode;
+};
+
+function ResizableAppLayout({
+  sidebar,
+  sidebarWidth,
+  onSidebarWidthChange,
+  children,
+}: ResizableAppLayoutProps) {
+  const { isMobile, open, setOpen } = useSidebar();
+  const sidebarPanelRef = useRef<PanelImperativeHandle | null>(null);
+  const sidebarWidthRef = useRef(sidebarWidth);
+
+  useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (!panel || isMobile) return;
+
+    if (open) {
+      panel.resize(`${sidebarWidthRef.current}px`);
+    } else {
+      panel.collapse();
+    }
+  }, [isMobile, open]);
+
+  if (isMobile) {
+    return (
+      <>
+        {sidebar}
+        {children}
+      </>
+    );
+  }
+
+  return (
+    <ResizablePanelGroup
+      orientation="horizontal"
+      id="crux-app-layout"
+      className="min-h-svh"
+    >
+      <ResizablePanel
+        panelRef={sidebarPanelRef}
+        id="app-sidebar"
+        collapsible
+        collapsedSize={`${SIDEBAR_COLLAPSED_WIDTH}px`}
+        defaultSize={`${sidebarWidth}px`}
+        groupResizeBehavior="preserve-pixel-size"
+        minSize={`${SIDEBAR_MIN_WIDTH}px`}
+        maxSize={`${SIDEBAR_MAX_WIDTH}px`}
+        onResize={(size: PanelSize) => {
+          if (size.inPixels <= SIDEBAR_COLLAPSED_WIDTH + 2) {
+            if (open) setOpen(false);
+            return;
+          }
+
+          if (!open) setOpen(true);
+          onSidebarWidthChange(size.inPixels);
+        }}
+        className="overflow-visible"
+      >
+        {sidebar}
+      </ResizablePanel>
+      <ResizableHandle
+        withHandle
+        className="z-20 bg-border/60 transition-colors hover:bg-primary/40 data-[resize-handle-state=drag]:bg-primary/70"
+      />
+      <ResizablePanel id="app-content" minSize="40%">
+        {children}
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
 

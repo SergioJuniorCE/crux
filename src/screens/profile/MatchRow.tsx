@@ -1,3 +1,5 @@
+import { motion } from 'motion/react'
+
 import type { RiotMatch, RiotMatchParticipant } from '../../types/riot'
 import {
   communityDragonSummonerSpell,
@@ -6,6 +8,7 @@ import {
   queueName,
 } from '@/lib/leagueAssets'
 import { cn } from '@/lib/utils'
+import { EASE_OUT_EXPO, listItem } from './motion'
 import { formatKda, relativeTime } from './utils'
 
 export function MatchRow({
@@ -48,12 +51,15 @@ export function MatchRow({
   const red = match.info.participants.filter((p) => p.teamId === 200)
 
   return (
-    <li
+    <motion.li
+      variants={listItem}
+      whileHover={{ y: -1 }}
+      transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
       className={cn(
-        'rounded-lg border px-3 py-2.5 transition-colors',
+        'rounded-lg border px-2.5 py-2 transition-colors',
         win
-          ? 'border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/8'
-          : 'border-red-500/20 bg-red-500/5 hover:bg-red-500/8',
+          ? 'border-emerald-500/20 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.07] hover:shadow-[0_4px_24px_-6px_rgba(16,185,129,0.18)]'
+          : 'border-red-500/20 bg-red-500/[0.04] hover:bg-red-500/[0.07] hover:shadow-[0_4px_24px_-6px_rgba(239,68,68,0.18)]',
       )}
     >
       {/*
@@ -62,26 +68,23 @@ export function MatchRow({
        * column. No nested flex-wrap means the stats block can't be pushed
        * below champion/spells/items on narrower widths.
        */}
-      <div className="grid grid-cols-[auto_auto_auto_auto_minmax(0,1fr)_auto] items-center gap-3">
-        <div className="flex items-center gap-3">
-          <span className={cn('h-14 w-1 rounded-full', win ? 'bg-emerald-400' : 'bg-red-400')} />
-          <div className="w-[82px]">
+      <div className="grid grid-cols-[auto_auto_auto_auto_minmax(0,1fr)_auto] items-center gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <span className={cn('h-11 w-0.5 rounded-full', win ? 'bg-emerald-400' : 'bg-red-400')} />
+          <div className="w-[78px]">
             <div
               className={cn(
-                'font-mono text-[11px] font-bold uppercase tracking-wide',
+                'font-mono text-[11px] font-bold uppercase leading-tight tracking-wide',
                 win ? 'text-emerald-300' : 'text-red-300',
               )}
             >
               {win ? 'Victory' : 'Defeat'}
             </div>
-            <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+            <div className="mt-0.5 truncate font-mono text-[9.5px] uppercase leading-tight tracking-wide text-muted-foreground">
               {queueName(match.info.queueId)}
             </div>
-            <div className="mt-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
-              {mins}m
-            </div>
-            <div className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
-              {relativeTime(endedAt)}
+            <div className="mt-0.5 font-mono text-[9.5px] leading-tight tabular-nums text-muted-foreground/80">
+              {mins}m · {relativeTime(endedAt)}
             </div>
           </div>
         </div>
@@ -90,7 +93,7 @@ export function MatchRow({
           <img
             src={ddragonChampionSquare(version, championName)}
             alt={championName}
-            className="h-12 w-12 rounded-md border border-border object-cover"
+            className="h-11 w-11 rounded-md border border-border object-cover"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'
             }}
@@ -120,12 +123,12 @@ export function MatchRow({
         </div>
 
         <div className="min-w-0 text-right">
-          <div className="font-mono text-sm font-semibold tabular-nums text-foreground">
+          <div className="font-mono text-[13px] font-semibold leading-tight tabular-nums text-foreground">
             {kills} / <span className="text-red-300">{deaths}</span> / {assists}
           </div>
           <div
             className={cn(
-              'mt-0.5 font-mono text-[10.5px] font-semibold tabular-nums',
+              'mt-0.5 font-mono text-[10px] font-semibold leading-tight tabular-nums',
               deaths === 0
                 ? 'text-amber-300'
                 : (kills + assists) / deaths >= 3
@@ -137,11 +140,8 @@ export function MatchRow({
           >
             {kda} KDA
           </div>
-          <div className="mt-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
-            {cs} CS ({csPerMin}/m)
-          </div>
-          <div className="font-mono text-[10px] tabular-nums text-muted-foreground">
-            {Math.round(totalDamageDealtToChampions / 1000)}k dmg · {visionScore} vis
+          <div className="mt-0.5 font-mono text-[9.5px] leading-tight tabular-nums text-muted-foreground">
+            {cs} CS ({csPerMin}/m) · {Math.round(totalDamageDealtToChampions / 1000)}k · {visionScore}vis
           </div>
         </div>
 
@@ -162,7 +162,7 @@ export function MatchRow({
           />
         </div>
       </div>
-    </li>
+    </motion.li>
   )
 }
 

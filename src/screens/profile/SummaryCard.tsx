@@ -1,106 +1,160 @@
-import { Sparkles } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
 
 import { cn } from '@/lib/utils'
 import type { Aggregates } from './aggregate'
-import { formatKda, winRate } from './utils'
+import { AnimatedNumber } from './AnimatedNumber'
+import { EASE_OUT_EXPO } from './motion'
+import { winRate } from './utils'
 
 export function SummaryCard({ stats }: { stats: Aggregates }) {
   const { totals } = stats
   const wr = winRate(totals.wins, totals.losses)
-  const kda = formatKda(totals.kills, totals.deaths, totals.assists)
-  const kdaNum = totals.deaths === 0 ? totals.kills + totals.assists : (totals.kills + totals.assists) / totals.deaths
+  const kdaNum =
+    totals.deaths === 0
+      ? totals.kills + totals.assists
+      : (totals.kills + totals.assists) / totals.deaths
+
+  const kdaTone =
+    kdaNum >= 4
+      ? 'text-amber-300'
+      : kdaNum >= 3
+        ? 'text-emerald-300'
+        : kdaNum >= 2
+          ? 'text-foreground'
+          : 'text-red-300'
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center gap-2">
-        <Sparkles size={13} className="text-primary" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          Last {totals.games} games performance
+    <section className="relative overflow-hidden rounded-xl border border-border bg-card px-4 py-3.5">
+      {/* Editorial vertical hairline anchored to the left of the title */}
+      <span className="pointer-events-none absolute left-0 top-3 h-4 w-0.5 rounded-r-full bg-primary/70" />
+
+      <div className="flex items-baseline gap-3">
+        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Form
         </span>
+        <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground/60">
+          / last {totals.games} games
+        </span>
+        <span className="ml-auto h-px flex-1 self-center bg-gradient-to-r from-border to-transparent" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 items-center gap-4 sm:grid-cols-[auto_1fr_auto]">
-        <div className="flex items-center gap-4">
+      <div className="mt-3 grid grid-cols-2 items-center gap-3 sm:grid-cols-[auto_1fr_auto]">
+        <div className="flex items-center gap-3">
           <WinRateRing wr={wr} wins={totals.wins} losses={totals.losses} />
           <div className="hidden sm:block">
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Record
             </div>
-            <div className="mt-1 font-mono text-sm tabular-nums">
-              <span className="text-emerald-300">{totals.wins}W</span>
+            <div className="mt-1 font-mono text-[12px] tabular-nums">
+              <AnimatedNumber
+                value={totals.wins}
+                suffix="W"
+                className="text-emerald-300"
+              />
               <span className="mx-1 text-muted-foreground">·</span>
-              <span className="text-red-300">{totals.losses}L</span>
+              <AnimatedNumber
+                value={totals.losses}
+                suffix="L"
+                className="text-red-300"
+              />
             </div>
           </div>
         </div>
 
         <div className="flex items-baseline gap-3 sm:justify-center">
           <div>
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               KDA
             </div>
-            <div
+            <AnimatedNumber
+              value={kdaNum}
+              decimals={2}
+              duration={1.2}
               className={cn(
-                'font-mono text-3xl font-semibold tabular-nums',
-                kdaNum >= 4
-                  ? 'text-amber-300'
-                  : kdaNum >= 3
-                    ? 'text-emerald-300'
-                    : kdaNum >= 2
-                      ? 'text-foreground'
-                      : 'text-red-300',
+                'mt-0.5 inline-block font-display text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums',
+                kdaTone,
               )}
-            >
-              {kda}
-            </div>
+            />
           </div>
-          <div className="font-mono text-[11px] tabular-nums text-muted-foreground">
-            {(totals.kills / Math.max(1, totals.games)).toFixed(1)}
+          <div className="font-mono text-[10px] tabular-nums text-muted-foreground">
+            <AnimatedNumber
+              value={totals.kills / Math.max(1, totals.games)}
+              decimals={1}
+            />
             {' / '}
-            <span className="text-red-300/70">
-              {(totals.deaths / Math.max(1, totals.games)).toFixed(1)}
-            </span>
+            <AnimatedNumber
+              value={totals.deaths / Math.max(1, totals.games)}
+              decimals={1}
+              className="text-red-300/70"
+            />
             {' / '}
-            {(totals.assists / Math.max(1, totals.games)).toFixed(1)}
+            <AnimatedNumber
+              value={totals.assists / Math.max(1, totals.games)}
+              decimals={1}
+            />
           </div>
         </div>
 
         <div className="text-right">
-          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Games
           </div>
-          <div className="mt-1 font-mono text-3xl font-semibold tabular-nums text-foreground">
-            {totals.games}
-          </div>
+          <AnimatedNumber
+            value={totals.games}
+            duration={0.9}
+            className="mt-0.5 inline-block font-display text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-foreground"
+          />
         </div>
       </div>
     </section>
   )
 }
 
-function WinRateRing({ wr, wins, losses }: { wr: number; wins: number; losses: number }) {
-  const radius = 32
+function WinRateRing({
+  wr,
+  wins,
+  losses,
+}: {
+  wr: number
+  wins: number
+  losses: number
+}) {
+  const reduced = useReducedMotion()
+  const radius = 26
   const circumference = 2 * Math.PI * radius
   const dash = (wr / 100) * circumference
-  const color = wr >= 60 ? 'stroke-emerald-400' : wr >= 50 ? 'stroke-primary' : 'stroke-red-400'
+  const color =
+    wr >= 60 ? 'stroke-emerald-400' : wr >= 50 ? 'stroke-primary' : 'stroke-red-400'
 
   return (
-    <div className="relative h-[72px] w-[72px]">
-      <svg viewBox="0 0 72 72" className="h-[72px] w-[72px] -rotate-90">
-        <circle cx="36" cy="36" r={radius} className="fill-none stroke-white/5" strokeWidth="6" />
-        <circle
-          cx="36"
-          cy="36"
+    <div className="relative h-[60px] w-[60px]">
+      <svg viewBox="0 0 60 60" className="h-[60px] w-[60px] -rotate-90">
+        <circle cx="30" cy="30" r={radius} className="fill-none stroke-white/5" strokeWidth="5" />
+        <motion.circle
+          cx="30"
+          cy="30"
           r={radius}
-          className={cn('fill-none transition-all', color)}
-          strokeWidth="6"
+          className={cn('fill-none', color)}
+          strokeWidth="5"
           strokeLinecap="round"
-          strokeDasharray={`${dash} ${circumference}`}
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: reduced ? circumference - dash : circumference }}
+          animate={{ strokeDashoffset: circumference - dash }}
+          transition={{
+            duration: reduced ? 0 : 1.1,
+            ease: EASE_OUT_EXPO,
+            delay: 0.15,
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{wr}%</span>
-        <span className="font-mono text-[9px] tabular-nums text-muted-foreground">
+        <AnimatedNumber
+          value={wr}
+          suffix="%"
+          duration={1.1}
+          className="font-mono text-[12px] font-semibold leading-none tabular-nums text-foreground"
+        />
+        <span className="mt-0.5 font-mono text-[8px] leading-none tabular-nums text-muted-foreground">
           {wins}W · {losses}L
         </span>
       </div>
