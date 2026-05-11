@@ -257,7 +257,10 @@ export function ProfileView({
         variants={containerStagger}
         className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]"
       >
-        <motion.aside variants={containerStagger} className="flex flex-col gap-3">
+        <motion.aside
+          variants={containerStagger}
+          className="flex flex-col gap-3"
+        >
           <motion.section
             variants={fadeUp}
             className="crux-grain relative overflow-hidden rounded-xl border border-border bg-card px-5 py-4"
@@ -303,7 +306,11 @@ export function ProfileView({
                   <motion.h1
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay: 0.2 }}
+                    transition={{
+                      duration: 0.6,
+                      ease: EASE_OUT_EXPO,
+                      delay: 0.2,
+                    }}
                     className="truncate font-display text-[28px] font-semibold leading-[1.05] tracking-[-0.035em] text-foreground"
                   >
                     {account.gameName}
@@ -311,7 +318,11 @@ export function ProfileView({
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, ease: EASE_OUT_EXPO, delay: 0.35 }}
+                    transition={{
+                      duration: 0.5,
+                      ease: EASE_OUT_EXPO,
+                      delay: 0.35,
+                    }}
                     className="font-mono text-[13px] tracking-tight text-muted-foreground"
                   >
                     #{account.tagLine}
@@ -320,7 +331,11 @@ export function ProfileView({
                 <motion.div
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.55, ease: EASE_OUT_EXPO, delay: 0.3 }}
+                  transition={{
+                    duration: 0.55,
+                    ease: EASE_OUT_EXPO,
+                    delay: 0.3,
+                  }}
                   className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
                 >
                   <span className="inline-flex items-center gap-1.5">
@@ -359,7 +374,10 @@ export function ProfileView({
                 lpHistory={rankedLpHistory}
               />
             ) : (
-              <EmptyRankedPanel label="Ranked Flex" icon={<Shield size={11} />} />
+              <EmptyRankedPanel
+                label="Ranked Flex"
+                icon={<Shield size={11} />}
+              />
             )}
           </motion.div>
 
@@ -375,7 +393,10 @@ export function ProfileView({
           </motion.div>
         </motion.aside>
 
-        <motion.main variants={containerStagger} className="flex flex-col gap-3">
+        <motion.main
+          variants={containerStagger}
+          className="flex flex-col gap-3"
+        >
           {filteredStats && filteredStats.totals.games > 0 && (
             <motion.div variants={fadeUp}>
               <SummaryCard stats={filteredStats} />
@@ -450,7 +471,7 @@ export function ProfileView({
               <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Match history
               </span>
-              <span className="ml-2 h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+              <span className="ml-2 h-px flex-1 bg-linear-to-r from-border to-transparent" />
             </div>
 
             {filteredMatches.length === 0 ? (

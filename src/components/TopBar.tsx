@@ -51,7 +51,7 @@ export function TopBar({ current, configured, onSelectOwn }: Props) {
   return (
     <div
       className={cn(
-        "sticky top-0 z-40 flex h-14 items-center gap-3 border-b px-4 pt-1 transition-[background-color,border-color,box-shadow] duration-300",
+        "sticky top-0 z-40 flex h-14 items-center gap-3 border-b px-4 my-2 transition-[background-color,border-color,box-shadow] duration-300",
         isScrolled
           ? "border-border bg-background/80 shadow-sm backdrop-blur-md"
           : "border-transparent bg-background",
