@@ -32,7 +32,9 @@ import { RecorderView } from "./screens/RecorderView";
 import { SettingsView } from "./screens/SettingsView";
 import { SessionsView } from "./screens/SessionsView";
 import { ProfileView } from "./screens/ProfileView";
+import { ChampSelectView } from "./screens/ChampSelectView";
 import { useGameStatus } from "./hooks/useGameStatus";
+import { useChampSelectSession } from "./hooks/useChampSelectSession";
 import { useLeagueRecorder } from "./hooks/useLeagueRecorder";
 import { useRecorderSettings } from "./hooks/useRecorderSettings";
 import {
@@ -82,6 +84,7 @@ function App() {
     useRiotSettings();
   const { hasEnvKey } = useRiotEnvStatus();
   const lcu = useLcuCurrentSummoner({ pollMs: 30_000 });
+  const champSelect = useChampSelectSession();
   const { isDark, toggle: toggleDark } = useDarkMode();
   const {
     recordingState,
@@ -95,7 +98,8 @@ function App() {
   // When the League client is running, prefer its identity over whatever
   // the user typed into Settings. The API key always comes from user
   // settings (or the RIOT_API_KEY env var in main).
-  const lcuGameName = lcu.data?.summoner.gameName || lcu.data?.summoner.displayName;
+  const lcuGameName =
+    lcu.data?.summoner.gameName || lcu.data?.summoner.displayName;
   const lcuTagLine = lcu.data?.summoner.tagLine;
   const lcuPlatform = lcu.data?.platform;
   const effectiveRiotSettings = useMemo<RiotSettings>(() => {
@@ -111,7 +115,7 @@ function App() {
   }, [lcu.isLive, lcuGameName, lcuPlatform, lcuTagLine, riotSettings]);
 
   const summoner = useSummoner(effectiveRiotSettings, {
-    matchCount: 15,
+    matchCount: 30,
     hasEnvKey,
   });
   const configured = isRiotConfigured(effectiveRiotSettings, { hasEnvKey });
@@ -120,10 +124,7 @@ function App() {
   const setResizableSidebarWidth = useCallback((width: number) => {
     const nextWidth = clampSidebarWidth(width);
     setSidebarWidth(nextWidth);
-    window.localStorage.setItem(
-      SIDEBAR_WIDTH_STORAGE_KEY,
-      String(nextWidth),
-    );
+    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(nextWidth));
   }, []);
 
   useEffect(() => {
@@ -186,103 +187,121 @@ function App() {
               className="animate-in fade-in-50 slide-in-from-bottom-1 duration-300"
             >
               <Routes location={location}>
-            <Route
-              path="/"
-              element={
-                <ProfileView
-                  status={summoner.status}
-                  data={summoner.data}
-                  error={summoner.error}
-                  configured={configured}
-                  hasIdentity={Boolean(
-                    effectiveRiotSettings.gameName.trim() &&
-                    effectiveRiotSettings.tagLine.trim(),
-                  )}
-                  hasApiAccess={Boolean(
-                    effectiveRiotSettings.apiKey.trim() || hasEnvKey,
-                  )}
-                  platform={effectiveRiotSettings.platform}
-                  clientLive={lcu.isLive}
-                  isViewingOther={false}
-                  ownIdentity={{
-                    gameName: effectiveRiotSettings.gameName,
-                    tagLine: effectiveRiotSettings.tagLine,
-                  }}
-                  onRefresh={() => {
-                    void lcu.refetch();
-                    void summoner.refetch();
-                  }}
-                  onOpenSettings={() => navigate("/settings")}
-                  onSelectPlayer={(gameName, tagLine) => {
-                    navigate(
-                      `/profile/${encodeURIComponent(effectiveRiotSettings.platform)}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
-                    );
-                  }}
-                  onBackToOwn={() => navigate("/")}
+                <Route
+                  path="/"
+                  element={
+                    <ProfileView
+                      status={summoner.status}
+                      data={summoner.data}
+                      error={summoner.error}
+                      configured={configured}
+                      hasIdentity={Boolean(
+                        effectiveRiotSettings.gameName.trim() &&
+                        effectiveRiotSettings.tagLine.trim(),
+                      )}
+                      hasApiAccess={Boolean(
+                        effectiveRiotSettings.apiKey.trim() || hasEnvKey,
+                      )}
+                      platform={effectiveRiotSettings.platform}
+                      clientLive={lcu.isLive}
+                      isViewingOther={false}
+                      ownIdentity={{
+                        gameName: effectiveRiotSettings.gameName,
+                        tagLine: effectiveRiotSettings.tagLine,
+                      }}
+                      onRefresh={() => {
+                        void lcu.refetch();
+                        void summoner.refetch();
+                      }}
+                      onOpenSettings={() => navigate("/settings")}
+                      onSelectPlayer={(gameName, tagLine) => {
+                        navigate(
+                          `/profile/${encodeURIComponent(effectiveRiotSettings.platform)}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+                        );
+                      }}
+                      onBackToOwn={() => navigate("/")}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/recorder"
-              element={
-                <RecorderView
-                  gameActive={gameActive}
-                  recordingState={recordingState}
-                  elapsedSeconds={elapsedSeconds}
-                  lastSavedPath={lastSavedPath}
-                  errorMessage={errorMessage}
-                  settings={settings}
-                  summonerStatus={summoner.status}
-                  summonerData={summoner.data}
-                  summonerError={summoner.error}
-                  summonerConfigured={configured}
-                  onRefreshSummoner={() => void summoner.refetch()}
-                  onOpenRiotSettings={() => navigate("/settings")}
+                <Route
+                  path="/recorder"
+                  element={
+                    <RecorderView
+                      gameActive={gameActive}
+                      recordingState={recordingState}
+                      elapsedSeconds={elapsedSeconds}
+                      lastSavedPath={lastSavedPath}
+                      errorMessage={errorMessage}
+                      settings={settings}
+                      summonerStatus={summoner.status}
+                      summonerData={summoner.data}
+                      summonerError={summoner.error}
+                      summonerConfigured={configured}
+                      onRefreshSummoner={() => void summoner.refetch()}
+                      onOpenRiotSettings={() => navigate("/settings")}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <SettingsView
-                  recorderProfiles={recorderProfiles}
-                  activeRecorderProfileId={activeRecorderProfileId}
-                  onActiveRecorderProfileChange={setActiveRecorderProfileId}
-                  onRecorderProfileChange={updateRecorderProfile}
-                  onAddRecorderProfile={addRecorderProfile}
-                  onRemoveRecorderProfile={removeRecorderProfile}
-                  riotSettings={riotSettings}
-                  onRiotSettingsChange={setRiotSettings}
-                  hasEnvRiotKey={hasEnvKey}
-                  isDark={isDark}
-                  onToggleDark={toggleDark}
+                <Route
+                  path="/champ-select"
+                  element={
+                    <ChampSelectView
+                      status={champSelect.status}
+                      session={champSelect.data}
+                      error={champSelect.error}
+                      profileStatus={summoner.status}
+                      profileData={summoner.data}
+                      profileConfigured={configured}
+                      onRefresh={() => {
+                        void champSelect.refetch();
+                        void summoner.refetch();
+                      }}
+                      onOpenSettings={() => navigate("/settings")}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/profile/:platform/:gameName/:tagLine"
-              element={
-                <OtherPlayerProfileRoute
-                  baseSettings={effectiveRiotSettings}
-                  hasEnvKey={hasEnvKey}
-                  onOpenSettings={() => navigate("/settings")}
-                  onBackToOwn={() => navigate("/")}
-                  ownIdentity={{
-                    gameName: effectiveRiotSettings.gameName,
-                    tagLine: effectiveRiotSettings.tagLine,
-                  }}
+                <Route
+                  path="/settings"
+                  element={
+                    <SettingsView
+                      recorderProfiles={recorderProfiles}
+                      activeRecorderProfileId={activeRecorderProfileId}
+                      onActiveRecorderProfileChange={setActiveRecorderProfileId}
+                      onRecorderProfileChange={updateRecorderProfile}
+                      onAddRecorderProfile={addRecorderProfile}
+                      onRemoveRecorderProfile={removeRecorderProfile}
+                      riotSettings={riotSettings}
+                      onRiotSettingsChange={setRiotSettings}
+                      hasEnvRiotKey={hasEnvKey}
+                      isDark={isDark}
+                      onToggleDark={toggleDark}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/profile/:gameName/:tagLine"
-              element={
-                <LegacyOtherPlayerProfileRedirect
-                  baseSettings={effectiveRiotSettings}
+                <Route
+                  path="/profile/:platform/:gameName/:tagLine"
+                  element={
+                    <OtherPlayerProfileRoute
+                      baseSettings={effectiveRiotSettings}
+                      hasEnvKey={hasEnvKey}
+                      onOpenSettings={() => navigate("/settings")}
+                      onBackToOwn={() => navigate("/")}
+                      ownIdentity={{
+                        gameName: effectiveRiotSettings.gameName,
+                        tagLine: effectiveRiotSettings.tagLine,
+                      }}
+                    />
+                  }
                 />
-              }
-            />
-            <Route path="/sessions" element={<SessionsView />} />
+                <Route
+                  path="/profile/:gameName/:tagLine"
+                  element={
+                    <LegacyOtherPlayerProfileRedirect
+                      baseSettings={effectiveRiotSettings}
+                    />
+                  }
+                />
+                <Route path="/sessions" element={<SessionsView />} />
               </Routes>
             </div>
           </main>

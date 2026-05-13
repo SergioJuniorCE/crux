@@ -1,22 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { LcuCurrentSummoner } from '../types/riot'
+import type { LcuCurrentSummoner } from "../types/riot";
 
 type LcuState = {
-  status: 'idle' | 'loading' | 'live' | 'unavailable'
-  data: LcuCurrentSummoner | null
-  error: string | null
-  lastCheckedAt: number | null
-}
+  status: "idle" | "loading" | "live" | "unavailable";
+  data: LcuCurrentSummoner | null;
+  error: string | null;
+  lastCheckedAt: number | null;
+};
 
 const INITIAL: LcuState = {
-  status: 'idle',
+  status: "idle",
   data: null,
   error: null,
   lastCheckedAt: null,
+};
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
-function isSameCurrentSummoner(a: LcuCurrentSummoner | null, b: LcuCurrentSummoner): boolean {
+function isSameCurrentSummoner(
+  a: LcuCurrentSummoner | null,
+  b: LcuCurrentSummoner,
+): boolean {
   return (
     a?.platform === b.platform &&
     a.regionCode === b.regionCode &&
@@ -24,15 +31,15 @@ function isSameCurrentSummoner(a: LcuCurrentSummoner | null, b: LcuCurrentSummon
     a.summoner.gameName === b.summoner.gameName &&
     a.summoner.displayName === b.summoner.displayName &&
     a.summoner.tagLine === b.summoner.tagLine
-  )
+  );
 }
 
 type Options = {
   /** Poll interval in ms while the app is open. Pass 0 to disable polling. */
-  pollMs?: number
+  pollMs?: number;
   /** Re-check when the browser window regains focus. */
-  refetchOnFocus?: boolean
-}
+  refetchOnFocus?: boolean;
+};
 
 /**
  * Watches the local League client (LCU) for the currently signed-in summoner.
@@ -46,71 +53,76 @@ type Options = {
  *   until a successful response resets it — avoids UI flicker.
  */
 export function useLcuCurrentSummoner(options: Options = {}) {
-  const { pollMs = 30_000, refetchOnFocus = true } = options
-  const [state, setState] = useState<LcuState>(INITIAL)
-  const inFlightRef = useRef(false)
+  const { pollMs = 30_000, refetchOnFocus = true } = options;
+  const [state, setState] = useState<LcuState>(INITIAL);
+  const inFlightRef = useRef(false);
 
   const fetchOnce = useCallback(async () => {
-    if (inFlightRef.current) return
-    inFlightRef.current = true
-    setState((prev) => ({ ...prev, status: prev.status === 'idle' ? 'loading' : prev.status }))
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    setState((prev) => ({
+      ...prev,
+      status: prev.status === "idle" ? "loading" : prev.status,
+    }));
 
     try {
-      const result = await window.electronAPI.getCurrentSummonerFromClient()
+      const result = await window.electronAPI.getCurrentSummonerFromClient();
       if (result.success) {
         setState((prev) => ({
-          status: 'live',
-          data: isSameCurrentSummoner(prev.data, result.data) ? prev.data : result.data,
+          status: "live",
+          data: isSameCurrentSummoner(prev.data, result.data)
+            ? prev.data
+            : result.data,
           error: null,
           lastCheckedAt: Date.now(),
-        }))
+        }));
       } else {
         setState((prev) => ({
-          status: 'unavailable',
+          status: "unavailable",
           data: prev.data,
           error: result.error,
           lastCheckedAt: Date.now(),
-        }))
+        }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setState((prev) => ({
-        status: 'unavailable',
+        status: "unavailable",
         data: prev.data,
-        error: err.message || String(err),
+        error: getErrorMessage(err),
         lastCheckedAt: Date.now(),
-      }))
+      }));
     } finally {
-      inFlightRef.current = false
+      inFlightRef.current = false;
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    void fetchOnce()
+    void fetchOnce();
 
-    if (pollMs <= 0) return
+    if (pollMs <= 0) return;
 
     const interval = setInterval(() => {
-      void fetchOnce()
-    }, pollMs)
+      void fetchOnce();
+    }, pollMs);
 
-    return () => clearInterval(interval)
-  }, [fetchOnce, pollMs])
+    return () => clearInterval(interval);
+  }, [fetchOnce, pollMs]);
 
   useEffect(() => {
-    if (!refetchOnFocus) return
+    if (!refetchOnFocus) return;
     const handler = () => {
-      void fetchOnce()
-    }
-    window.addEventListener('focus', handler)
-    return () => window.removeEventListener('focus', handler)
-  }, [fetchOnce, refetchOnFocus])
+      void fetchOnce();
+    };
+    window.addEventListener("focus", handler);
+    return () => window.removeEventListener("focus", handler);
+  }, [fetchOnce, refetchOnFocus]);
 
   return {
     status: state.status,
     data: state.data,
     error: state.error,
     lastCheckedAt: state.lastCheckedAt,
-    isLive: state.status === 'live' && state.data !== null,
+    isLive: state.status === "live" && state.data !== null,
     refetch: fetchOnce,
-  }
+  };
 }

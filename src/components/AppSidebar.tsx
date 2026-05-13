@@ -1,14 +1,15 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Activity,
   History,
+  LayoutTemplate,
   Moon,
   Settings,
   Sun,
   UserRound,
   Zap,
   type LucideIcon,
-} from 'lucide-react'
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -22,47 +23,48 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from '@/components/ui/sidebar'
-import { StatusPill, type StatusPillVariant } from './StatusPill'
-import { cn } from '@/lib/utils'
-import type { RecordingState } from '../types/recorder'
+} from "@/components/ui/sidebar";
+import { StatusPill, type StatusPillVariant } from "./StatusPill";
+import { cn } from "@/lib/utils";
+import type { RecordingState } from "../types/recorder";
 
 type NavItem = {
-  to: string
-  label: string
-  icon: LucideIcon
-  end?: boolean
-}
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Profile', icon: UserRound, end: true },
-  { to: '/recorder', label: 'Recorder', icon: Activity },
-  { to: '/sessions', label: 'Sessions', icon: History },
-  { to: '/settings', label: 'Settings', icon: Settings },
-]
+  { to: "/", label: "Profile", icon: UserRound, end: true },
+  { to: "/champ-select", label: "Champ Select", icon: LayoutTemplate },
+  { to: "/recorder", label: "Recorder", icon: Activity },
+  { to: "/sessions", label: "Sessions", icon: History },
+  { to: "/settings", label: "Settings", icon: Settings },
+];
 
 function deriveStatus(
   gameActive: boolean,
   state: RecordingState,
 ): StatusPillVariant {
-  if (state === 'recording') return 'recording'
-  if (state === 'saving') return 'saving'
-  if (state === 'error') return 'error'
-  if (gameActive) return 'live'
-  return 'idle'
+  if (state === "recording") return "recording";
+  if (state === "saving") return "saving";
+  if (state === "error") return "error";
+  if (gameActive) return "live";
+  return "idle";
 }
 
 function pathMatches(pathname: string, item: NavItem) {
-  if (item.end) return pathname === item.to
-  return pathname.startsWith(item.to)
+  if (item.end) return pathname === item.to;
+  return pathname.startsWith(item.to);
 }
 
 type Props = {
-  gameActive: boolean
-  recordingState: RecordingState
-  isDark: boolean
-  onToggleDark: () => void
-}
+  gameActive: boolean;
+  recordingState: RecordingState;
+  isDark: boolean;
+  onToggleDark: () => void;
+};
 
 export function AppSidebar({
   gameActive,
@@ -70,8 +72,8 @@ export function AppSidebar({
   isDark,
   onToggleDark,
 }: Props) {
-  const status = deriveStatus(gameActive, recordingState)
-  const location = useLocation()
+  const status = deriveStatus(gameActive, recordingState);
+  const location = useLocation();
 
   return (
     <Sidebar side="left" collapsible="icon" className="border-r border-border">
@@ -96,8 +98,8 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
-                const active = pathMatches(location.pathname, item)
-                const Icon = item.icon
+                const active = pathMatches(location.pathname, item);
+                const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton
@@ -105,10 +107,10 @@ export function AppSidebar({
                       isActive={active}
                       tooltip={item.label}
                       className={cn(
-                        'relative font-medium transition-colors',
+                        "relative font-medium transition-colors",
                         active
-                          ? 'text-sidebar-foreground'
-                          : 'text-muted-foreground hover:text-sidebar-foreground',
+                          ? "text-sidebar-foreground"
+                          : "text-muted-foreground hover:text-sidebar-foreground",
                       )}
                     >
                       <NavLink to={item.to} end={item.end}>
@@ -124,7 +126,7 @@ export function AppSidebar({
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -145,34 +147,34 @@ export function AppSidebar({
           type="button"
           onClick={onToggleDark}
           aria-label="Toggle theme"
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
           className="group flex h-8 w-full items-center gap-2 rounded-md px-2 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
         >
           <span className="relative flex h-4 w-4 items-center justify-center">
             <Sun
               size={14}
               className={cn(
-                'absolute transition-all duration-300 ease-out',
+                "absolute transition-all duration-300 ease-out",
                 isDark
-                  ? 'rotate-0 scale-100 opacity-100'
-                  : '-rotate-90 scale-50 opacity-0',
+                  ? "rotate-0 scale-100 opacity-100"
+                  : "-rotate-90 scale-50 opacity-0",
               )}
             />
             <Moon
               size={14}
               className={cn(
-                'absolute transition-all duration-300 ease-out',
+                "absolute transition-all duration-300 ease-out",
                 isDark
-                  ? 'rotate-90 scale-50 opacity-0'
-                  : 'rotate-0 scale-100 opacity-100',
+                  ? "rotate-90 scale-50 opacity-0"
+                  : "rotate-0 scale-100 opacity-100",
               )}
             />
           </span>
           <span className="group-data-[collapsible=icon]:hidden">
-            {isDark ? 'Light mode' : 'Dark mode'}
+            {isDark ? "Light mode" : "Dark mode"}
           </span>
         </button>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

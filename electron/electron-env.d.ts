@@ -15,51 +15,56 @@ declare namespace NodeJS {
      * │
      * ```
      */
-    APP_ROOT: string
+    APP_ROOT: string;
     /** /dist/ or /public/ */
-    VITE_PUBLIC: string
+    VITE_PUBLIC: string;
   }
 }
 
 type RecordingSession = {
-  filename: string
-  path: string
-  size: number
-  createdAt: number
-}
+  filename: string;
+  path: string;
+  size: number;
+  createdAt: number;
+};
 
 type ExportParams = {
-  sourcePath: string
-  startSec?: number
-  endSec?: number
-  speedMultiplier?: number
-}
+  sourcePath: string;
+  startSec?: number;
+  endSec?: number;
+  speedMultiplier?: number;
+};
 
 type ExportResult = {
-  success: boolean
-  session?: RecordingSession
-  error?: string
-}
+  success: boolean;
+  session?: RecordingSession;
+  error?: string;
+};
 
 // Used in Renderer process, exposed in `preload.ts`
 interface Window {
   electronAPI: {
-    openExternalUrl: (url: string) => Promise<boolean>
-    onGameStatus: (listener: (payload: { active: boolean }) => void) => () => void
-    getDesktopSources: () => Promise<Array<{ id: string; name: string }>>
+    openExternalUrl: (url: string) => Promise<boolean>;
+    onGameStatus: (
+      listener: (payload: { active: boolean }) => void,
+    ) => () => void;
+    getDesktopSources: () => Promise<Array<{ id: string; name: string }>>;
     saveRecording: (
       recordingBuffer: ArrayBuffer,
       limits: { maxCount: number; maxSizeGB: number },
-    ) => Promise<string>
-    getRecordings: () => Promise<RecordingSession[]>
-    deleteRecording: (filePath: string) => Promise<boolean>
-    exportRecording: (params: ExportParams) => Promise<ExportResult>
+    ) => Promise<string>;
+    getRecordings: () => Promise<RecordingSession[]>;
+    deleteRecording: (filePath: string) => Promise<boolean>;
+    exportRecording: (params: ExportParams) => Promise<ExportResult>;
     getRiotSummoner: (
-      params: import('../src/types/riot').RiotFetchParams,
-    ) => Promise<import('../src/types/riot').RiotFetchResult>
-    getRiotEnvStatus: () => Promise<{ hasEnvKey: boolean }>
+      params: import("../src/types/riot").RiotFetchParams,
+    ) => Promise<import("../src/types/riot").RiotFetchResult>;
+    getRiotEnvStatus: () => Promise<{ hasEnvKey: boolean }>;
     getCurrentSummonerFromClient: () => Promise<
-      import('../src/types/riot').LcuCurrentSummonerResult
-    >
-  }
+      import("../src/types/riot").LcuCurrentSummonerResult
+    >;
+    getChampSelectSessionFromClient: () => Promise<
+      import("../src/types/riot").LcuChampSelectSessionResult
+    >;
+  };
 }

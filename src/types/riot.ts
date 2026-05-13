@@ -167,3 +167,32 @@ export type LcuCurrentSummoner = {
 export type LcuCurrentSummonerResult =
   | { success: true; data: LcuCurrentSummoner }
   | { success: false; error: string };
+
+export type LcuChampSelectParticipant = {
+  cellId: number;
+  championId: number;
+  assignedPosition?: string;
+  summonerId?: number;
+  puuid?: string;
+  team?: number;
+};
+
+export type LcuChampSelectAction = {
+  actorCellId: number;
+  championId: number;
+  completed: boolean;
+  id: number;
+  isAllyAction: boolean;
+  type: "pick" | "ban" | string;
+};
+
+export type LcuChampSelectSession = {
+  localPlayerCellId: number;
+  myTeam: LcuChampSelectParticipant[];
+  theirTeam: LcuChampSelectParticipant[];
+  actions: LcuChampSelectAction[][];
+};
+
+export type LcuChampSelectSessionResult =
+  | { success: true; data: LcuChampSelectSession }
+  | { success: false; error: string };
