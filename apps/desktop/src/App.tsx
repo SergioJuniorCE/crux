@@ -249,6 +249,7 @@ function App() {
                       profileStatus={summoner.status}
                       profileData={summoner.data}
                       profileConfigured={configured}
+                      settings={riotSettings}
                       onRefresh={() => {
                         void champSelect.refetch();
                         void summoner.refetch();

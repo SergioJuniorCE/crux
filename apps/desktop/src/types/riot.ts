@@ -184,3 +184,44 @@ export type LcuChampSelectSession = {
 export type LcuChampSelectSessionResult =
   | { success: true; data: LcuChampSelectSession }
   | { success: false; error: string };
+
+// ── Global Stats Types ────────────────────────────────────────────────────────
+
+export type ChampionItemStat = {
+  itemId: number;
+  gamesPlayed: number;
+  wins: number;
+  winRate: number;
+  avgPurchaseTime: number | null;
+  patch: string;
+};
+
+export type ChampionStatsResponse = {
+  success: boolean;
+  championId: number;
+  totalItems: number;
+  patch: string;
+  items: ChampionItemStat[];
+};
+
+export type ChampionInfo = {
+  championId: number;
+  championName: string;
+  championImageId?: string;
+  itemCount: number;
+  totalGames: number;
+  latestPatch: string;
+};
+
+export type ChampionsListResponse = {
+  success: boolean;
+  total: number;
+  champions: ChampionInfo[];
+};
+
+export type StatsInfoResponse = {
+  success: boolean;
+  totalMatches: number;
+  championsWithStats: number;
+  patchesAvailable: string[];
+};

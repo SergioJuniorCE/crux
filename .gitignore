@@ -26,3 +26,6 @@ dist-ssr
 dist-electron
 .env
 .turbo
+
+# Agent skills / tooling
+.agents

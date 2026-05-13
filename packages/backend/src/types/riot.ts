@@ -58,6 +58,7 @@ export type RiotLeagueEntry = {
   tier: string;
   rank: string;
   summonerId: string;
+  puuid?: string;
   leaguePoints: number;
   wins: number;
   losses: number;
@@ -119,6 +120,7 @@ export type RiotMatch = {
     gameEndTimestamp?: number;
     gameMode: string;
     gameType: string;
+    gameVersion?: string;
     queueId: number;
     participants: RiotMatchParticipant[];
   };

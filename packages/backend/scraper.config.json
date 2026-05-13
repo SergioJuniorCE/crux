@@ -1,0 +1,17 @@
+{
+  "concurrency": 3,
+  "rateLimitPerSecond": 20,
+  "rateLimitBurst": 100,
+  "defaultMatchCount": 20,
+  "delayBetweenRequestsMs": 50,
+  "crawlerTargetRank": "MASTER",
+  "crawlerQueueSize": 1000,
+  "crawlerAutoAggregateInterval": 100,
+  "cron": {
+    "enabled": false,
+    "schedule": "0 6 * * *",
+    "maxPuuidsPerRun": 50,
+    "matchesPerPuuid": 20,
+    "autoAggregate": true
+  }
+}

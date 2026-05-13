@@ -10,16 +10,25 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "scrape:summoner": "bun run src/scripts/scrape-summoner.ts",
+    "scrape:matches": "bun run src/scripts/scrape-matches.ts",
+    "scrape:bulk": "bun run src/scripts/scrape-bulk.ts",
+    "scrape:seed": "bun run src/scripts/scrape-seed.ts",
+    "aggregate": "bun run src/scripts/aggregate.ts",
+    "cron": "bun run src/scripts/cron.ts"
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.2.0",
     "@libsql/client": "^0.14.0",
     "drizzle-orm": "^0.38.0",
     "elysia": "^1.2.0",
-    "@elysiajs/cors": "^1.2.0"
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
     "@types/node": "^25.3.0",
+    "@types/node-cron": "^3.0.11",
     "drizzle-kit": "^0.30.0",
     "typescript": "^5.2.2"
   }

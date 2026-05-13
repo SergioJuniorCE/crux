@@ -211,7 +211,7 @@ async function getCachedFromDb<T>(key: string): Promise<T | null> {
     .get();
 
   if (!row) return null;
-  if (row.expiresAt <= Date.now()) {
+  if (row.expiresAt <= new Date()) {
     await db.delete(apiCache).where(eq(apiCache.key, key));
     return null;
   }

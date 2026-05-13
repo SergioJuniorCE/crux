@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   BarChart3,
+  Database,
   Flame,
   RefreshCw,
   Shield,
@@ -12,18 +13,15 @@ import {
 
 import type {
   LcuChampSelectSession,
-  RiotMatchParticipant,
   RiotProfileBundle,
+  ChampionItemStat,
 } from "../types/riot";
+import { useChampionStats } from "../hooks/useChampionStats";
+import type { RiotSettings } from "../hooks/useRiotSettings";
 import {
   ROLE_LABELS,
-  communityDragonSummonerSpell,
   ddragonChampionSquare,
   ddragonItem,
-  ddragonRuneIcon,
-  ddragonRuneStyleIcon,
-  runeName,
-  runeStyleName,
 } from "@/lib/leagueAssets";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +32,7 @@ type ChampSelectViewProps = {
   profileStatus: "idle" | "loading" | "success" | "error";
   profileData: RiotProfileBundle | null;
   profileConfigured: boolean;
+  settings: RiotSettings;
   onRefresh: () => void;
   onOpenSettings: () => void;
 };
@@ -50,24 +49,6 @@ type ChampionLookup = {
   byKey: Record<number, ChampionRecord>;
 };
 
-type BuildSource = "champion" | "role" | "recent";
-
-type BuildVariant = {
-  name: string;
-  description: string;
-  count: number;
-  wins: number;
-  winRate: number;
-  items: { id: number; count: number }[];
-  accent: string;
-};
-
-type RuneSet = {
-  primaryStyle?: number;
-  secondaryStyle?: number;
-  keystone?: number;
-};
-
 const ROLE_FALLBACK_LABELS: Record<string, string> = {
   TOP: "Top",
   JUNGLE: "Jungle",
@@ -76,28 +57,6 @@ const ROLE_FALLBACK_LABELS: Record<string, string> = {
   UTILITY: "Support",
   UNSELECTED: "Any role",
 };
-
-const TRINKET_ITEM_IDS = new Set([
-  3330, 3340, 3348, 3363, 3364, 3513, 3599, 3600, 2052,
-]);
-
-const TANK_ITEMS = new Set([
-  3068, 3075, 3083, 3110, 3143, 3190, 3742, 4401, 6662, 6664, 6665, 8020,
-]);
-const AP_ITEMS = new Set([
-  3003, 3020, 3089, 3100, 3102, 3115, 3116, 3135, 3157, 4636, 4644, 4645, 6653,
-  6655, 6656, 6657,
-]);
-const LETHALITY_ITEMS = new Set([
-  3142, 3814, 6692, 6694, 6695, 6696, 6697, 6698, 6701,
-]);
-const CRIT_ITEMS = new Set([
-  3031, 3033, 3036, 3085, 3087, 3094, 3095, 6672, 6673, 6675, 6676,
-]);
-const BRUISER_ITEMS = new Set([
-  3053, 3071, 3074, 3078, 3156, 3161, 6333, 6609, 6610, 6630, 6631, 6632, 6699,
-  3748,
-]);
 
 function normalizeRole(role?: string) {
   return role?.trim().toUpperCase() || "UNSELECTED";
@@ -130,241 +89,6 @@ function findLocalRole(session: LcuChampSelectSession | null) {
   return normalizeRole(participant?.assignedPosition);
 }
 
-function participantForSelf(
-  match: RiotProfileBundle["matches"][number],
-  puuid: string,
-) {
-  return match.info.participants.find(
-    (participant) => participant.puuid === puuid,
-  );
-}
-
-function collectSelfParticipants(data: RiotProfileBundle | null) {
-  if (!data) return [];
-  return data.matches
-    .map((match) => participantForSelf(match, data.account.puuid))
-    .filter(Boolean) as RiotMatchParticipant[];
-}
-
-function getParticipantItems(participant: RiotMatchParticipant) {
-  return [
-    participant.item0,
-    participant.item1,
-    participant.item2,
-    participant.item3,
-    participant.item4,
-    participant.item5,
-  ].filter((itemId) => itemId && !TRINKET_ITEM_IDS.has(itemId));
-}
-
-function countItems(matches: RiotMatchParticipant[]) {
-  const counts = new Map<number, number>();
-  for (const participant of matches) {
-    for (const itemId of getParticipantItems(participant)) {
-      counts.set(itemId, (counts.get(itemId) ?? 0) + 1);
-    }
-  }
-
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([id, count]) => ({ id, count }));
-}
-
-function pickMostCommon<T>(values: T[], key: (value: T) => string) {
-  const counts = new Map<string, { value: T; count: number }>();
-  for (const value of values) {
-    const id = key(value);
-    const next = counts.get(id) ?? { value, count: 0 };
-    counts.set(id, { value, count: next.count + 1 });
-  }
-  return [...counts.values()].sort((a, b) => b.count - a.count)[0];
-}
-
-function classifyBuildStyle(participant: RiotMatchParticipant) {
-  const items = getParticipantItems(participant);
-  const score = (set: Set<number>) =>
-    items.filter((itemId) => set.has(itemId)).length;
-  const scores = [
-    {
-      name: "Tank",
-      score: score(TANK_ITEMS),
-      description: "Durable frontline setup",
-      accent: "from-emerald-400/25 to-cyan-400/10",
-    },
-    {
-      name: "AP",
-      score: score(AP_ITEMS),
-      description: "Magic damage setup",
-      accent: "from-violet-400/25 to-fuchsia-400/10",
-    },
-    {
-      name: "Lethality",
-      score: score(LETHALITY_ITEMS),
-      description: "Burst damage setup",
-      accent: "from-red-400/25 to-orange-400/10",
-    },
-    {
-      name: "Crit",
-      score: score(CRIT_ITEMS),
-      description: "Carry damage setup",
-      accent: "from-sky-400/25 to-blue-400/10",
-    },
-    {
-      name: "Bruiser / AD",
-      score: score(BRUISER_ITEMS),
-      description: "Fighter and skirmish setup",
-      accent: "from-primary/25 to-amber-400/10",
-    },
-  ].sort((a, b) => b.score - a.score);
-
-  if (scores[0].score <= 0) {
-    return {
-      name: "Common",
-      description: "Most frequent recent setup",
-      accent: "from-primary/20 to-white/5",
-    };
-  }
-
-  return scores[0];
-}
-
-function deriveBuildVariants(matches: RiotMatchParticipant[]): BuildVariant[] {
-  const groups = new Map<
-    string,
-    {
-      description: string;
-      accent: string;
-      matches: RiotMatchParticipant[];
-    }
-  >();
-
-  for (const participant of matches) {
-    const style = classifyBuildStyle(participant);
-    const group = groups.get(style.name) ?? {
-      description: style.description,
-      accent: style.accent,
-      matches: [],
-    };
-    group.matches.push(participant);
-    groups.set(style.name, group);
-  }
-
-  return [...groups.entries()]
-    .map(([name, group]) => {
-      const wins = group.matches.filter(
-        (participant) => participant.win,
-      ).length;
-      return {
-        name,
-        description: group.description,
-        count: group.matches.length,
-        wins,
-        winRate: group.matches.length
-          ? Math.round((wins / group.matches.length) * 100)
-          : 0,
-        items: countItems(group.matches).slice(0, 4),
-        accent: group.accent,
-      };
-    })
-    .sort((a, b) => b.count - a.count || b.winRate - a.winRate)
-    .slice(0, 4);
-}
-
-function deriveRecommendations(
-  participants: RiotMatchParticipant[],
-  championId: number,
-  role: string,
-) {
-  const championMatches = participants.filter(
-    (participant) => participant.championId === championId,
-  );
-  const roleMatches = participants.filter(
-    (participant) => normalizeRole(participant.teamPosition) === role,
-  );
-  const sourceMatches = championMatches.length
-    ? championMatches
-    : roleMatches.length
-      ? roleMatches
-      : participants;
-  const sourceLabel: BuildSource = championMatches.length
-    ? "champion"
-    : roleMatches.length
-      ? "role"
-      : "recent";
-
-  const items = countItems(sourceMatches);
-  const spellPair = pickMostCommon(
-    sourceMatches.map(
-      (participant) =>
-        [participant.summoner1Id, participant.summoner2Id] as const,
-    ),
-    ([a, b]) => [a, b].sort((left, right) => left - right).join("-"),
-  );
-
-  const runeSet = pickMostCommon(
-    sourceMatches
-      .map((participant) => participant.perks)
-      .filter(Boolean)
-      .map(
-        (perks): RuneSet => ({
-          primaryStyle: perks!.styles[0]?.style,
-          secondaryStyle: perks!.styles[1]?.style,
-          keystone: perks!.styles[0]?.selections[0]?.perk,
-        }),
-      )
-      .filter((runes) => runes.primaryStyle && runes.keystone),
-    (runes) =>
-      `${runes.primaryStyle}-${runes.secondaryStyle}-${runes.keystone}`,
-  );
-
-  const wins = sourceMatches.filter((participant) => participant.win).length;
-  const deaths = sourceMatches.reduce(
-    (sum, participant) => sum + participant.deaths,
-    0,
-  );
-  const kdaNumerator = sourceMatches.reduce(
-    (sum, participant) => sum + participant.kills + participant.assists,
-    0,
-  );
-  const avgKills = average(
-    sourceMatches.map((participant) => participant.kills),
-  );
-  const avgDeaths = average(
-    sourceMatches.map((participant) => participant.deaths),
-  );
-  const avgAssists = average(
-    sourceMatches.map((participant) => participant.assists),
-  );
-
-  return {
-    sourceMatches,
-    sourceLabel,
-    variants: deriveBuildVariants(sourceMatches),
-    coreItems: items.slice(0, 6),
-    completedItems: items.slice(0, 10),
-    situationalItems: items.slice(6, 14),
-    spellPair,
-    runeSet,
-    wins,
-    winRate: sourceMatches.length
-      ? Math.round((wins / sourceMatches.length) * 100)
-      : 0,
-    kda: deaths ? kdaNumerator / deaths : kdaNumerator,
-    avgKills,
-    avgDeaths,
-    avgAssists,
-  };
-}
-
-function average(values: number[]) {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function formatDecimal(value: number, digits = 1) {
-  return value.toFixed(digits);
-}
-
 async function fetchChampionLookup(
   versionHint?: string,
 ): Promise<ChampionLookup> {
@@ -395,9 +119,10 @@ export function ChampSelectView({
   status,
   session,
   error,
-  profileStatus,
+  profileStatus: _profileStatus,
   profileData,
   profileConfigured,
+  settings,
   onRefresh,
   onOpenSettings,
 }: ChampSelectViewProps) {
@@ -406,6 +131,13 @@ export function ChampSelectView({
   const localRole = findLocalRole(session);
   const dataDragonVersion =
     profileData?.dataDragonVersion ?? champions?.version;
+
+  // Fetch global stats from the backend
+  const globalStats = useChampionStats(settings, championId, {
+    order: 0,
+    minGames: 5,
+    limit: 20,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -423,16 +155,13 @@ export function ChampSelectView({
   }, [profileData?.dataDragonVersion]);
 
   const champion = championId ? champions?.byKey[championId] : null;
-  const participants = useMemo(
-    () => collectSelfParticipants(profileData),
-    [profileData],
-  );
-  const recommendations = useMemo(
-    () => deriveRecommendations(participants, championId, localRole),
-    [championId, localRole, participants],
-  );
   const roleLabel =
     ROLE_LABELS[localRole] ?? ROLE_FALLBACK_LABELS[localRole] ?? localRole;
+
+  // Categorize items by purchase order from global stats
+  const firstItems = globalStats.items.filter((item) => item.avgPurchaseTime && item.avgPurchaseTime < 720).slice(0, 6);
+  const topItems = globalStats.items.slice(0, 10);
+  const situationalItems = globalStats.items.slice(10, 18);
 
   if (status === "error") {
     return (
@@ -474,8 +203,8 @@ export function ChampSelectView({
     champion?.name ??
     (championId ? `Champion ${championId}` : "Pick a champion");
   const pageTitle = championId
-    ? `${championTitle} ${roleLabel} Build, Runes, Items, and Stats`
-    : "Champion Build, Runes, Items, and Stats";
+    ? `${championTitle} ${roleLabel} Build, Items, and Stats`
+    : "Champion Build, Items, and Stats";
 
   return (
     <div className="flex flex-col gap-2">
@@ -499,14 +228,18 @@ export function ChampSelectView({
                   {pageTitle}
                 </h1>
                 <FilterChip label="Role" value={roleLabel} />
-                <FilterChip
-                  label="Source"
-                  value={sourceLabel(recommendations.sourceLabel)}
-                />
+                {globalStats.hasData && (
+                  <FilterChip
+                    label="Source"
+                    value={`${globalStats.totalGames.toLocaleString()} Master+ games`}
+                  />
+                )}
               </div>
               <p className="mt-1 truncate text-xs text-muted-foreground">
                 {championId
-                  ? `Personal recommendations · patch ${dataDragonVersion ?? "latest"} · ${recommendations.sourceMatches.length} games`
+                  ? globalStats.hasData
+                    ? `Global recommendations · patch ${globalStats.patch || "latest"} · ${globalStats.items.length} items tracked`
+                    : "No global stats available yet. Run the crawler to populate data."
                   : "Hover or lock a champion to populate the guide."}
               </p>
             </div>
@@ -516,19 +249,25 @@ export function ChampSelectView({
             <HeroStat
               label="Tier"
               value={tierLabel(
-                recommendations.winRate,
-                recommendations.sourceMatches.length,
+                globalStats.items[0]?.winRate ?? 0,
+                globalStats.items[0]?.gamesPlayed ?? 0,
               )}
             />
-            <HeroStat label="WR" value={`${recommendations.winRate}%`} />
             <HeroStat
-              label="Games"
-              value={String(recommendations.sourceMatches.length)}
+              label="Top Item WR"
+              value={globalStats.items[0] ? `${globalStats.items[0].winRate}%` : "—"}
             />
-            <HeroStat label="KDA" value={formatDecimal(recommendations.kda)} />
             <HeroStat
-              label="Avg"
-              value={`${formatDecimal(recommendations.avgKills)}/${formatDecimal(recommendations.avgDeaths)}/${formatDecimal(recommendations.avgAssists)}`}
+              label="Items Tracked"
+              value={String(globalStats.items.length)}
+            />
+            <HeroStat
+              label="Total Games"
+              value={globalStats.totalGames.toLocaleString()}
+            />
+            <HeroStat
+              label="Patch"
+              value={globalStats.patch || "—"}
             />
           </div>
         </div>
@@ -537,12 +276,11 @@ export function ChampSelectView({
       {!profileConfigured ? (
         <section className="rounded-xl border border-dashed border-border bg-card/50 p-5 text-center">
           <h2 className="text-sm font-semibold text-foreground">
-            Link Riot API for recommendations
+            Set up backend for recommendations
           </h2>
           <p className="mx-auto mt-1 max-w-lg text-xs text-muted-foreground">
-            Champ select detection works through the local League client, but
-            builds and runes need your recent match data. Add your Riot ID and
-            API key in Settings.
+            Global champion stats are fetched from the Crux backend. Make sure
+            your backend URL and Riot API key are configured in Settings.
           </p>
           <button
             type="button"
@@ -552,36 +290,33 @@ export function ChampSelectView({
             Open Settings
           </button>
         </section>
-      ) : profileStatus === "loading" && !profileData ? (
+      ) : globalStats.status === "loading" ? (
         <section className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
-          Loading your match history…
+          Loading global champion stats…
         </section>
       ) : null}
 
       <div className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <main className="space-y-2">
           <PlaystyleBuilds
-            variants={recommendations.variants}
+            items={topItems}
             dataDragonVersion={dataDragonVersion}
           />
           <ItemsPanel
-            coreItems={recommendations.coreItems}
-            completedItems={recommendations.completedItems}
-            situationalItems={recommendations.situationalItems}
+            firstItems={firstItems}
+            topItems={topItems}
+            situationalItems={situationalItems}
             dataDragonVersion={dataDragonVersion}
-            hasProfileData={Boolean(profileData)}
+            hasStats={globalStats.hasData}
           />
         </main>
 
         <aside>
           <LoadoutPanel
-            runeSet={recommendations.runeSet?.value}
-            runeCount={recommendations.runeSet?.count}
-            spells={recommendations.spellPair?.value}
-            spellCount={recommendations.spellPair?.count}
             championName={championTitle}
-            source={recommendations.sourceLabel}
-            sampleCount={recommendations.sourceMatches.length}
+            source="global"
+            sampleCount={globalStats.totalGames}
+            dataDragonVersion={dataDragonVersion}
           />
         </aside>
       </div>
@@ -732,65 +467,57 @@ function HeroStat({
 }
 
 function PlaystyleBuilds({
-  variants,
+  items,
   dataDragonVersion,
 }: {
-  variants: BuildVariant[];
+  items: ChampionItemStat[];
   dataDragonVersion?: string;
 }) {
   return (
     <section className="rounded-xl border border-border bg-card p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="crux-eyebrow">Playstyles</span>
+          <span className="crux-eyebrow">Top Items</span>
           <h2 className="text-sm font-semibold tracking-[-0.02em] text-foreground">
-            Build paths
+            Highest win rate
           </h2>
         </div>
         <BarChart3 size={15} className="text-muted-foreground" />
       </div>
 
-      {variants.length ? (
-        <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-4">
-          {variants.map((variant) => (
+      {items.length ? (
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {items.slice(0, 5).map((item) => (
             <article
-              key={variant.name}
-              className={cn(
-                "overflow-hidden rounded-lg border border-border bg-linear-to-br p-2.5 text-center",
-                variant.accent,
-              )}
+              key={item.itemId}
+              className="overflow-hidden rounded-lg border border-border bg-linear-to-br from-background/40 to-background/10 p-2.5 text-center"
             >
-              <div className="flex flex-col items-center gap-1.5">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {variant.name}
-                  </h3>
-                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                    {variant.description}
-                  </p>
-                </div>
+              <div className="flex flex-col items-center gap-1">
+                {dataDragonVersion ? (
+                  <img
+                    src={ddragonItem(dataDragonVersion, item.itemId) ?? undefined}
+                    alt={`Item ${item.itemId}`}
+                    className="h-10 w-10 rounded-md border border-border bg-muted object-cover"
+                  />
+                ) : (
+                  <span className="h-10 w-10 rounded-md border border-dashed border-border bg-background/50" />
+                )}
                 <div>
-                  <p className="text-sm font-bold tracking-[-0.04em] text-foreground">
-                    {variant.winRate}%
+                  <p className="text-base font-bold tracking-[-0.04em] text-foreground">
+                    {item.winRate}%
                   </p>
                   <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {variant.count} games
+                    {item.gamesPlayed.toLocaleString()} games
                   </p>
                 </div>
               </div>
-              <ItemStrip
-                items={variant.items}
-                dataDragonVersion={dataDragonVersion}
-                className="mt-2"
-                size="sm"
-              />
             </article>
           ))}
         </div>
       ) : (
         <EmptyPanelText>
-          No playstyle samples yet. Link Riot data or play a few games to
-          populate this section.
+          No global stats available for this champion yet. Run the crawler to
+          populate data.
         </EmptyPanelText>
       )}
     </section>
@@ -798,17 +525,17 @@ function PlaystyleBuilds({
 }
 
 function ItemsPanel({
-  coreItems,
-  completedItems,
+  firstItems,
+  topItems,
   situationalItems,
   dataDragonVersion,
-  hasProfileData,
+  hasStats,
 }: {
-  coreItems: { id: number; count: number }[];
-  completedItems: { id: number; count: number }[];
-  situationalItems: { id: number; count: number }[];
+  firstItems: ChampionItemStat[];
+  topItems: ChampionItemStat[];
+  situationalItems: ChampionItemStat[];
   dataDragonVersion?: string;
-  hasProfileData: boolean;
+  hasStats: boolean;
 }) {
   return (
     <section className="rounded-xl border border-border bg-card p-3">
@@ -816,7 +543,7 @@ function ItemsPanel({
         <div className="flex items-center gap-2">
           <span className="crux-eyebrow">Items</span>
           <h2 className="text-sm font-semibold tracking-[-0.02em] text-foreground">
-            Build order
+            By win rate
           </h2>
         </div>
         <Sparkles size={15} className="text-primary" />
@@ -824,47 +551,49 @@ function ItemsPanel({
 
       <div className="mt-2 grid grid-cols-1 gap-2 2xl:grid-cols-[1.2fr_1fr]">
         <BuildSection
-          title="Starting Items"
-          note="Not exposed by Riot post-game data yet"
+          title="First Items"
+          note="Highest WR items (purchased before ~12 min)"
         >
-          <p className="rounded-md border border-dashed border-border bg-background/35 p-2 text-[11px] text-muted-foreground">
-            Crux can read your final inventory from match history, but Riot's
-            match API does not include the exact opening buy. This section is
-            ready for a global build provider later.
-          </p>
-        </BuildSection>
-
-        <BuildSection title="Build Order" note="Most common final-item path">
-          {coreItems.length && dataDragonVersion ? (
-            <ItemBuildOrder
-              items={coreItems}
-              dataDragonVersion={dataDragonVersion}
-            />
+          {firstItems.length && dataDragonVersion ? (
+            <FirstItemRow items={firstItems} dataDragonVersion={dataDragonVersion} />
           ) : (
             <EmptyPanelText>
-              {hasProfileData
-                ? "No usable item data found for this sample."
-                : "Load your profile data to populate item recommendations."}
+              {hasStats
+                ? "Not enough purchase-time data to filter first items."
+                : "No global stats available yet."}
             </EmptyPanelText>
           )}
         </BuildSection>
 
-        <BuildSection title="Completed Items" note="Highest frequency">
-          <ItemStrip
-            items={completedItems}
-            dataDragonVersion={dataDragonVersion}
-          />
+        <BuildSection title="Top Items" note="Highest win rate overall">
+          {topItems.length && dataDragonVersion ? (
+            <ItemStrip
+              items={topItems}
+              dataDragonVersion={dataDragonVersion}
+            />
+          ) : (
+            <EmptyPanelText>
+              {hasStats
+                ? "No item data available."
+                : "No global stats available yet."}
+            </EmptyPanelText>
+          )}
         </BuildSection>
 
-        <BuildSection
-          title="Situational Items"
-          note="Lower frequency alternatives"
-        >
+        <BuildSection title="Situational" note="Also strong alternatives">
           <ItemStrip
             items={situationalItems}
             dataDragonVersion={dataDragonVersion}
             muted
           />
+        </BuildSection>
+
+        <BuildSection title="Sample Note" note="">
+          <p className="rounded-md border border-dashed border-border bg-background/35 p-2 text-[11px] text-muted-foreground">
+            Items are ranked by win rate across all Master+ games in the local
+            database. Larger sample sizes = more reliable data. Run the crawler
+            for more matches.
+          </p>
         </BuildSection>
       </div>
     </section>
@@ -893,21 +622,33 @@ function BuildSection({
   );
 }
 
-function ItemBuildOrder({
+function FirstItemRow({
   items,
   dataDragonVersion,
 }: {
-  items: { id: number; count: number }[];
+  items: ChampionItemStat[];
   dataDragonVersion: string;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-lg border border-border bg-background/40 p-2 text-center">
       {items.slice(0, 6).map((item, index) => (
-        <div key={item.id} className="flex items-center gap-1.5">
+        <div key={item.itemId} className="flex items-center gap-1.5">
           {index > 0 ? (
             <span className="text-muted-foreground/60">→</span>
           ) : null}
-          <ItemIcon item={item} dataDragonVersion={dataDragonVersion} />
+          <div
+            className="group relative rounded-md border border-border bg-background/50 p-1"
+            title={`${item.winRate}% WR · ${item.gamesPlayed} games`}
+          >
+            <img
+              src={ddragonItem(dataDragonVersion, item.itemId) ?? undefined}
+              alt={`Item ${item.itemId}`}
+              className="h-9 w-9 rounded-md bg-muted object-cover"
+            />
+            <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground shadow-sm">
+              {item.winRate}%
+            </span>
+          </div>
         </div>
       ))}
     </div>
@@ -921,7 +662,7 @@ function ItemStrip({
   className,
   size = "md",
 }: {
-  items: { id: number; count: number }[];
+  items: ChampionItemStat[];
   dataDragonVersion?: string;
   muted?: boolean;
   className?: string;
@@ -934,174 +675,84 @@ function ItemStrip({
   return (
     <div className={cn("flex flex-wrap justify-center gap-1.5", className)}>
       {items.map((item) => (
-        <ItemIcon
-          key={item.id}
-          item={item}
-          dataDragonVersion={dataDragonVersion}
-          muted={muted}
-          size={size}
-        />
+        <div
+          key={item.itemId}
+          className={cn(
+            "group relative rounded-md border border-border bg-background/50 p-1",
+            muted && "opacity-70",
+          )}
+          title={`${item.winRate}% WR · ${item.gamesPlayed.toLocaleString()} games`}
+        >
+          <img
+            src={ddragonItem(dataDragonVersion, item.itemId) ?? undefined}
+            alt={`Item ${item.itemId}`}
+            className={cn(
+              "rounded-md bg-muted object-cover",
+              size === "sm" ? "h-7 w-7" : "h-9 w-9",
+            )}
+          />
+          <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground shadow-sm">
+            {item.winRate}%
+          </span>
+        </div>
       ))}
     </div>
   );
 }
 
-function ItemIcon({
-  item,
-  dataDragonVersion,
-  muted = false,
-  size = "md",
-}: {
-  item: { id: number; count: number };
-  dataDragonVersion: string;
-  muted?: boolean;
-  size?: "sm" | "md";
-}) {
-  return (
-    <div
-      className={cn(
-        "group relative rounded-md border border-border bg-background/50 p-1",
-        muted && "opacity-70",
-      )}
-      title={`Item ${item.id} · ${item.count} games`}
-    >
-      <img
-        src={ddragonItem(dataDragonVersion, item.id) ?? undefined}
-        alt={`Item ${item.id}`}
-        className={cn(
-          "rounded-md bg-muted object-cover",
-          size === "sm" ? "h-7 w-7" : "h-9 w-9",
-        )}
-      />
-      <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground shadow-sm">
-        {item.count}
-      </span>
-    </div>
-  );
-}
-
 function LoadoutPanel({
-  runeSet,
-  runeCount,
-  spells,
-  spellCount,
   championName,
-  source,
+  source: _source,
   sampleCount,
+  dataDragonVersion,
 }: {
-  runeSet?: RuneSet;
-  runeCount?: number;
-  spells?: readonly [number, number];
-  spellCount?: number;
   championName: string;
-  source: BuildSource;
+  source: string;
   sampleCount: number;
+  dataDragonVersion?: string;
 }) {
   return (
     <section className="rounded-xl border border-border bg-card p-3">
       <div className="grid grid-cols-1 gap-3 text-center">
-        <RunesCard runeSet={runeSet} count={runeCount} />
+        <RunesCard />
         <Divider />
-        <SummonerSpellsCard spells={spells} count={spellCount} />
+        <SummonerSpellsCard />
         <Divider />
         <AbilityPanel />
         <Divider />
         <InsightsCard
           championName={championName}
-          source={source}
           sampleCount={sampleCount}
+          dataDragonVersion={dataDragonVersion}
         />
       </div>
     </section>
   );
 }
 
-function RunesCard({ runeSet, count }: { runeSet?: RuneSet; count?: number }) {
+function RunesCard() {
   return (
     <div>
       <div className="flex items-center justify-center gap-2">
         <span className="crux-eyebrow">Runes</span>
-        {count ? (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-            {count} games
-          </span>
-        ) : null}
       </div>
-      {runeSet ? (
-        <div className="mt-2 space-y-2">
-          <div className="flex items-center justify-center gap-2 rounded-lg bg-background/40 p-2">
-            <img
-              src={ddragonRuneIcon(runeSet.keystone) ?? undefined}
-              alt=""
-              className="h-9 w-9 rounded-full bg-muted object-cover"
-            />
-            <div className="min-w-0 text-center">
-              <p className="truncate text-xs font-semibold text-foreground">
-                {runeName(runeSet.keystone) ?? `Rune ${runeSet.keystone}`}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                Keystone sample
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[runeSet.primaryStyle, runeSet.secondaryStyle].map((styleId) => (
-              <div
-                key={`style-${styleId ?? "unknown"}`}
-                className="rounded-md bg-background/40 p-2 text-center"
-              >
-                <img
-                  src={ddragonRuneStyleIcon(styleId) ?? undefined}
-                  alt=""
-                  className="h-6 w-6 rounded-full bg-muted object-cover"
-                />
-                <p className="mt-1 truncate text-[11px] font-semibold text-foreground">
-                  {runeStyleName(styleId) ?? `Style ${styleId}`}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-muted-foreground">No rune data yet.</p>
-      )}
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Rune aggregation coming to the global stats provider. Run the crawler
+        to build the dataset — rune stats will be available in a future update.
+      </p>
     </div>
   );
 }
 
-function SummonerSpellsCard({
-  spells,
-  count,
-}: {
-  spells?: readonly [number, number];
-  count?: number;
-}) {
+function SummonerSpellsCard() {
   return (
     <div>
       <div className="flex items-center justify-center gap-2">
         <span className="crux-eyebrow">Summoners</span>
-        {count ? (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-            {count} games
-          </span>
-        ) : null}
       </div>
-      {spells ? (
-        <div className="mt-2 flex justify-center gap-2">
-          {spells.map((spellId) => (
-            <img
-              key={spellId}
-              src={communityDragonSummonerSpell(spellId) ?? undefined}
-              alt={`Summoner spell ${spellId}`}
-              className="h-10 w-10 rounded-md border border-border bg-muted object-cover"
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-muted-foreground">
-          No summoner spell data yet.
-        </p>
-      )}
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Summoner spell aggregation coming to the global stats provider.
+      </p>
     </div>
   );
 }
@@ -1122,37 +773,49 @@ function AbilityPanel() {
 
 function InsightsCard({
   championName,
-  source,
   sampleCount,
+  dataDragonVersion,
 }: {
   championName: string;
-  source: BuildSource;
   sampleCount: number;
+  dataDragonVersion?: string;
 }) {
   return (
     <div>
       <span className="crux-eyebrow justify-center">Insights</span>
       <ul className="mt-2 space-y-1.5 text-center text-xs text-muted-foreground">
         <li className="flex justify-center gap-1.5">
+          <Database size={12} className="mt-0.5 shrink-0 text-primary" />
+          <span>
+            Recommendations from{" "}
+            <strong className="text-foreground">
+              {sampleCount.toLocaleString()}
+            </strong>{" "}
+            Master+ games in the local database.
+          </span>
+        </li>
+        <li className="flex justify-center gap-1.5">
           <Shield size={12} className="mt-0.5 shrink-0 text-primary" />
           <span>
-            Recommendations are based on {sourceLabel(source).toLowerCase()}{" "}
-            from your own history.
+            Data sourced from {dataDragonVersion ? `patch ${dataDragonVersion}` : "the latest patch"}.
+            Older patches are excluded automatically.
           </span>
         </li>
         <li className="flex justify-center gap-1.5">
           <Sword size={12} className="mt-0.5 shrink-0 text-primary" />
           <span>
-            {sampleCount
-              ? `${sampleCount} games were used for this ${championName} guide.`
-              : "No match samples are available yet."}
+            {championName} data is a filtered subset. Run{" "}
+            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[10px]">
+              bun run scrape:seed
+            </code>{" "}
+            to grow the dataset.
           </span>
         </li>
         <li className="flex justify-center gap-1.5">
           <Trophy size={12} className="mt-0.5 shrink-0 text-primary" />
           <span>
-            Add a global stats provider later to unlock matchup, rank, patch,
-            and worldwide sample filters.
+            Matchup-specific filters will be available once the dataset reaches
+            sufficient sample sizes.
           </span>
         </li>
       </ul>
@@ -1170,12 +833,6 @@ function EmptyPanelText({ children }: { children: ReactNode }) {
       {children}
     </p>
   );
-}
-
-function sourceLabel(source: BuildSource) {
-  if (source === "champion") return "Champion sample";
-  if (source === "role") return "Role fallback";
-  return "Recent fallback";
 }
 
 function tierLabel(winRate: number, sampleCount: number) {
