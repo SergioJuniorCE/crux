@@ -134,18 +134,6 @@ export type RiotProfileBundle = {
   dataDragonVersion: string;
 };
 
-export type RiotFetchParams = {
-  platform: PlatformRegion;
-  gameName: string;
-  tagLine: string;
-  apiKey?: string;
-  matchCount?: number;
-};
-
-export type RiotFetchResult =
-  | { success: true; data: RiotProfileBundle }
-  | { success: false; error: string; status?: number };
-
 export type LcuSummoner = {
   accountId: number;
   displayName: string;

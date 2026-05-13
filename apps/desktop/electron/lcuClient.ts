@@ -3,7 +3,11 @@ import https from "node:https";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import type { PlatformRegion } from "./riotApi";
+/** Platform routing values used by the Riot Games API. */
+export type PlatformRegion =
+  | "na1" | "br1" | "la1" | "la2" | "euw1" | "eun1"
+  | "tr1" | "ru" | "kr" | "jp1" | "oc1"
+  | "ph2" | "sg2" | "th2" | "tw2" | "vn2";
 
 /**
  * Minimal client for the League Client (LCU) local API.

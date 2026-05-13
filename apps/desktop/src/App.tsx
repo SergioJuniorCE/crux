@@ -82,7 +82,7 @@ function App() {
   } = useRecorderSettings();
   const { settings: riotSettings, setSettings: setRiotSettings } =
     useRiotSettings();
-  const { hasEnvKey } = useRiotEnvStatus();
+  const { hasEnvKey } = useRiotEnvStatus(riotSettings.backendUrl);
   const lcu = useLcuCurrentSummoner({ pollMs: 30_000 });
   const champSelect = useChampSelectSession();
   const { isDark, toggle: toggleDark } = useDarkMode();
@@ -96,8 +96,7 @@ function App() {
   } = useLeagueRecorder(settings);
 
   // When the League client is running, prefer its identity over whatever
-  // the user typed into Settings. The API key always comes from user
-  // settings (or the RIOT_API_KEY env var in main).
+  // the user typed into Settings. The API key is handled by the backend.
   const lcuGameName =
     lcu.data?.summoner.gameName || lcu.data?.summoner.displayName;
   const lcuTagLine = lcu.data?.summoner.tagLine;
@@ -116,9 +115,8 @@ function App() {
 
   const summoner = useSummoner(effectiveRiotSettings, {
     matchCount: 30,
-    hasEnvKey,
   });
-  const configured = isRiotConfigured(effectiveRiotSettings, { hasEnvKey });
+  const configured = isRiotConfigured(effectiveRiotSettings);
   const location = useLocation();
   const navigate = useNavigate();
   const setResizableSidebarWidth = useCallback((width: number) => {
@@ -199,9 +197,7 @@ function App() {
                         effectiveRiotSettings.gameName.trim() &&
                         effectiveRiotSettings.tagLine.trim(),
                       )}
-                      hasApiAccess={Boolean(
-                        effectiveRiotSettings.apiKey.trim() || hasEnvKey,
-                      )}
+                      hasApiAccess={hasEnvKey}
                       platform={effectiveRiotSettings.platform}
                       clientLive={lcu.isLive}
                       isViewingOther={false}
@@ -226,7 +222,7 @@ function App() {
                 <Route
                   path="/recorder"
                   element={
-                    <RecorderView
+                      <RecorderView
                       gameActive={gameActive}
                       recordingState={recordingState}
                       elapsedSeconds={elapsedSeconds}
@@ -239,6 +235,7 @@ function App() {
                       summonerConfigured={configured}
                       onRefreshSummoner={() => void summoner.refetch()}
                       onOpenRiotSettings={() => navigate("/settings")}
+                      onStopRecording={stopRecording}
                     />
                   }
                 />
@@ -403,12 +400,9 @@ type OtherPlayerProfileRouteProps = {
 };
 
 /**
- * Renders someone else's Riot profile. Reuses our API key from the effective
+ * Renders someone else's Riot profile. Reuses the backend from the effective
  * settings, but takes both platform + Riot ID from the URL so the page is
  * self-contained and doesn't silently depend on the signed-in user's shard.
- * A separate `useSummoner` instance keeps this fetch independent from the
- * user's own profile so navigating between players doesn't clobber "my
- * profile" cache.
  */
 function OtherPlayerProfileRoute({
   baseSettings,
@@ -441,9 +435,9 @@ function OtherPlayerProfileRoute({
     [baseSettings, routePlatform, gameName, tagLine],
   );
 
-  const summoner = useSummoner(targetSettings, { matchCount: 15, hasEnvKey });
+  const summoner = useSummoner(targetSettings, { matchCount: 15 });
   const refetchSummoner = summoner.refetch;
-  const configured = isRiotConfigured(targetSettings, { hasEnvKey });
+  const configured = isRiotConfigured(targetSettings);
 
   const refresh = useCallback(() => {
     void refetchSummoner();
@@ -465,7 +459,7 @@ function OtherPlayerProfileRoute({
       error={summoner.error}
       configured={configured}
       hasIdentity={Boolean(gameName.trim() && tagLine.trim())}
-      hasApiAccess={Boolean(targetSettings.apiKey.trim() || hasEnvKey)}
+      hasApiAccess={hasEnvKey}
       platform={targetSettings.platform}
       clientLive={false}
       isViewingOther

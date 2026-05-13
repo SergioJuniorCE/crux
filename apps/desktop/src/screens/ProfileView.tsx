@@ -121,8 +121,8 @@ export function ProfileView({
             {!hasIdentity
               ? "Add your Riot ID below or open the League of Legends client to auto-detect your account."
               : !hasApiAccess
-                ? "Your Riot ID is saved, but you still need a Riot developer API key in Settings (or RIOT_API_KEY in .env) to load profile data."
-                : "Open the League of Legends client to auto-detect your account, or enter your Riot ID and a developer API key manually. You can also look up any player by Riot ID below."}
+                ? "Your Riot ID is saved, but the Crux backend does not have a Riot API key configured. Set RIOT_API_KEY in packages/backend/.env."
+                : "Open the League of Legends client to auto-detect your account, or enter your Riot ID manually. You can also look up any player by Riot ID below."}
           </p>
           <div className="mx-auto mt-4 max-w-sm">
             <PlayerSearch
@@ -148,7 +148,7 @@ export function ProfileView({
               onClick={onOpenSettings}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-white/15"
             >
-              {hasIdentity && !hasApiAccess ? "Add API key" : "Open Settings"}
+              {hasIdentity && !hasApiAccess ? "Backend setup" : "Open Settings"}
             </button>
           </div>
         </section>

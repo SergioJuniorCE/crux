@@ -22,6 +22,70 @@
 
 This repository is Bun-first. Any agent working in this repo should assume Bun is the standard runtime and package manager unless the user says otherwise.
 
+## Architecture Overview
+
+The project is a Turborepo monorepo split into two independent packages:
+
+### Frontend (Electron desktop app)
+- **Location**: `apps/desktop/` — React + Electron desktop app
+- **Stack**: React 18, Vite, Tailwind CSS 4, shadcn/ui, Electron 30
+- **Desktop features**: Game recording (MediaRecorder), LCU integration (local HTTPS), champ select, video sessions
+- **Riot API calls**: **None** — all Riot data is fetched from the Crux backend
+- **Settings**: Stores Riot ID (gameName, tagLine), platform region, and backend URL in localStorage
+
+### Backend (ElysiaJS server)
+- **Location**: `packages/backend/`
+- **Stack**: ElysiaJS, Drizzle ORM, @libsql/client (SQLite)
+- **API key**: Stored in `packages/backend/.env` as `RIOT_API_KEY` (never in the frontend)
+- **Role**: Proxies Riot API calls, caches responses in SQLite, exposes REST API to the frontend
+- **Default port**: 3001 (configurable via `PORT` env var)
+- **Auto-migration**: Runs `src/db/migrate.ts` on every startup (creates tables if missing)
+- **Cache cleanup**: Expired `api_cache` entries are pruned every 10 minutes
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check + reports `hasApiKey` status |
+| GET | `/api/summoner/:platform/:gameName/:tagLine?matchCount=N` | Fetch summoner profile bundle (account, summoner, league, matches, DataDragon version) |
+
+### Data Flow
+```
+User Input → Electron Renderer → fetch() → Backend (ElysiaJS) → Riot API
+                                                ↓
+                                            SQLite cache (Drizzle ORM)
+```
+
+### Running Locally
+```bash
+# Single command (both frontend + backend via Turborepo):
+bun run dev
+
+# Or run individually:
+bun run dev --filter=crux-desktop    # Frontend only
+bun run dev --filter=crux-backend    # Backend only
+```
+
+### Backend Setup
+1. Copy `packages/backend/.env.example` to `packages/backend/.env`
+2. Set `RIOT_API_KEY` to your Riot Games API key (get one at https://developer.riotgames.com/)
+3. The database auto-migrates on startup — no manual migration needed
+
+## Database
+
+- **Engine**: SQLite via @libsql/client (Turso-compatible)
+- **ORM**: Drizzle ORM
+- **Schema**: `packages/backend/src/db/schema.ts`
+- **Tables**: `summoners`, `matches`, `api_cache`
+- **Migrations**: Auto on startup via `packages/backend/src/db/migrate.ts`
+  - Standalone: `bun run db:migrate` in packages/backend/
+- **DB file**: `packages/backend/data/crux.db` (configurable via `DATABASE_URL` env var)
+
+## Settings
+- The Riot API key is stored ONLY in the backend's `.env` file (`RIOT_API_KEY`).
+- The frontend settings store: backend URL, Riot ID (gameName + tagLine), platform region.
+- Users configure the backend URL in the app's Settings panel (default: `http://localhost:3001`).
+
 ## UI / UX Defaults
 
 - Prioritize compact, information-dense overview screens over large hero/marketing-style layouts.

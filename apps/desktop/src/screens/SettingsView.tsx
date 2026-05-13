@@ -4,8 +4,6 @@ import {
   Camera,
   Check,
   ExternalLink,
-  Eye,
-  EyeOff,
   HardDrive,
   Laptop,
   Loader2,
@@ -13,6 +11,7 @@ import {
   Palette,
   Plus,
   Power,
+  Server,
   Sparkles,
   Sun,
   Trash2,
@@ -50,6 +49,7 @@ type SettingsViewProps = {
   onRiotSettingsChange: (
     updater: (current: RiotSettings) => RiotSettings,
   ) => void;
+  /** Whether the backend reports having a Riot API key configured. */
   hasEnvRiotKey: boolean;
   isDark: boolean;
   onToggleDark: () => void;
@@ -119,15 +119,12 @@ export function SettingsView({
   isDark,
   onToggleDark,
 }: SettingsViewProps) {
-  const [showApiKey, setShowApiKey] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [detectError, setDetectError] = useState<string | null>(null);
   const [detectSuccessAt, setDetectSuccessAt] = useState<number | null>(null);
   const [selectedRecorderProfileId, setSelectedRecorderProfileId] = useState(
     activeRecorderProfileId,
   );
-  const hasUiKey = Boolean(riotSettings.apiKey);
-  const envKeyActive = hasEnvRiotKey && !hasUiKey;
   const selectedRecorderProfile =
     recorderProfiles.find(
       (profile) => profile.id === selectedRecorderProfileId,
@@ -203,6 +200,62 @@ export function SettingsView({
         </p>
       </div>
 
+      {/* ── Backend ────────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={<Server size={15} />}
+        title="Crux backend"
+        description="The backend server handles Riot API requests and data caching."
+      >
+        <div className="flex flex-col gap-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Backend URL
+            </span>
+            <input
+              type="text"
+              placeholder="http://localhost:3001"
+              autoComplete="off"
+              spellCheck={false}
+              className="rounded-md border border-border bg-background/50 px-3 py-2 font-mono text-sm text-foreground outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              value={riotSettings.backendUrl}
+              onChange={(event) =>
+                onRiotSettingsChange((current) => ({
+                  ...current,
+                  backendUrl: event.target.value.trim(),
+                }))
+              }
+            />
+          </label>
+
+          <div className="flex items-center gap-2 rounded-md bg-white/[0.03] px-3 py-2.5 text-xs">
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full",
+                hasEnvRiotKey ? "bg-emerald-500" : "bg-red-500",
+              )}
+            />
+            {hasEnvRiotKey ? (
+              <span className="text-emerald-300">
+                API key configured — backend is ready to fetch Riot data.
+              </span>
+            ) : (
+              <span className="text-muted-foreground">
+                Set{" "}
+                <code className="rounded bg-white/[0.06] px-1 py-0.5 font-mono text-[11px]">
+                  RIOT_API_KEY
+                </code>{" "}
+                in{" "}
+                <code className="rounded bg-white/[0.06] px-1 py-0.5 font-mono text-[11px]">
+                  packages/backend/.env
+                </code>{" "}
+                to enable Riot API access.
+              </span>
+            )}
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ── Riot account ──────────────────────────────────────────────────── */}
       <SectionCard
         icon={<UserCircle2 size={15} />}
         title="Riot account"
@@ -220,7 +273,7 @@ export function SettingsView({
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Reads your Riot ID and region directly from the running game
-                  client — no API key needed.
+                  client.
                 </p>
               </div>
               <button
@@ -325,95 +378,10 @@ export function SettingsView({
               ))}
             </select>
           </FieldRow>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              API key
-              {envKeyActive && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9.5px] font-semibold tracking-wide text-emerald-300 ring-1 ring-emerald-500/25">
-                  <Check size={10} />
-                  Loaded from .env
-                </span>
-              )}
-              {hasUiKey && hasEnvRiotKey && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] px-2 py-0.5 text-[9.5px] font-semibold tracking-wide text-muted-foreground ring-1 ring-white/10">
-                  Override active
-                </span>
-              )}
-            </span>
-            <div className="flex items-center gap-2 rounded-md border border-border bg-background/50 pr-1 transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
-              <input
-                type={showApiKey ? "text" : "password"}
-                placeholder={
-                  envKeyActive ? "Using RIOT_API_KEY from .env" : "RGAPI-..."
-                }
-                autoComplete="off"
-                spellCheck={false}
-                className="w-full bg-transparent px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
-                value={riotSettings.apiKey}
-                onChange={(event) =>
-                  onRiotSettingsChange((current) => ({
-                    ...current,
-                    apiKey: event.target.value.trim(),
-                  }))
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey((v) => !v)}
-                className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
-                title={showApiKey ? "Hide API key" : "Show API key"}
-                aria-label={showApiKey ? "Hide API key" : "Show API key"}
-              >
-                {showApiKey ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
-            </div>
-            <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
-              {envKeyActive ? (
-                <>
-                  Using{" "}
-                  <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">
-                    RIOT_API_KEY
-                  </code>
-                  from your{" "}
-                  <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">
-                    .env
-                  </code>
-                  . Enter a key above to override.
-                </>
-              ) : (
-                <>
-                  Get a development key from the
-                  <a
-                    href="https://developer.riotgames.com/"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      void window.electronAPI.openExternalUrl(
-                        "https://developer.riotgames.com/",
-                      );
-                    }}
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
-                  >
-                    Riot Developer Portal
-                    <ExternalLink size={10} />
-                  </a>
-                  . Or set{" "}
-                  <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">
-                    RIOT_API_KEY
-                  </code>{" "}
-                  in a
-                  <code className="rounded bg-white/[0.05] px-1 py-0.5 font-mono text-[10.5px] text-foreground/80">
-                    .env
-                  </code>{" "}
-                  file at the project root.
-                </>
-              )}
-            </span>
-          </label>
         </div>
       </SectionCard>
 
+      {/* ── Recorder devices ──────────────────────────────────────────────── */}
       <SectionCard
         icon={<Camera size={15} />}
         title="Recorder devices"
@@ -608,6 +576,7 @@ export function SettingsView({
         </div>
       </SectionCard>
 
+      {/* ── Storage ───────────────────────────────────────────────────────── */}
       <SectionCard
         icon={<HardDrive size={15} />}
         title="Storage"
@@ -665,6 +634,7 @@ export function SettingsView({
         )}
       </SectionCard>
 
+      {/* ── Appearance ────────────────────────────────────────────────────── */}
       <SectionCard
         icon={<Palette size={15} />}
         title="Appearance"

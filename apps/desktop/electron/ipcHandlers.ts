@@ -5,11 +5,6 @@ import { createRequire } from "node:module";
 
 import { formatTimestamp } from "./utils";
 import {
-  getSummonerBundle,
-  type PlatformRegion,
-  type RiotProfileBundle,
-} from "./riotApi";
-import {
   getChampSelectSessionFromClient,
   getCurrentSummonerFromClient,
   type ChampSelectSessionPayload,
@@ -30,17 +25,6 @@ function getRecordingsDir() {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
-}
-
-function getErrorStatus(error: unknown) {
-  if (typeof error !== "object" || error === null || !("status" in error)) {
-    return undefined;
-  }
-
-  const status = (error as { status?: unknown }).status;
-  return typeof status === "number" || typeof status === "string"
-    ? Number(status)
-    : undefined;
 }
 
 /** Build the atempo filter chain; `atempo` only accepts 0.5–2.0 per node. */
@@ -274,13 +258,6 @@ export function registerIpcHandlers() {
   });
 
   ipcMain.handle(
-    "riot-env-status",
-    async (): Promise<{ hasEnvKey: boolean }> => {
-      return { hasEnvKey: Boolean(process.env.RIOT_API_KEY?.trim()) };
-    },
-  );
-
-  ipcMain.handle(
     "lcu-get-current-summoner",
     async (): Promise<
       | { success: true; data: CurrentSummonerPayload }
@@ -306,57 +283,6 @@ export function registerIpcHandlers() {
         return { success: true, data };
       } catch (err: unknown) {
         return { success: false, error: getErrorMessage(err) };
-      }
-    },
-  );
-
-  ipcMain.handle(
-    "riot-get-summoner",
-    async (
-      _event,
-      params: {
-        platform: PlatformRegion;
-        gameName: string;
-        tagLine: string;
-        apiKey?: string;
-        matchCount?: number;
-      },
-    ): Promise<
-      | { success: true; data: RiotProfileBundle }
-      | { success: false; error: string; status?: number }
-    > => {
-      const { platform, gameName, tagLine, matchCount } = params;
-
-      // Prefer the renderer-provided key when present so users can override
-      // whatever lives in .env without a restart. Fall back to the env var.
-      const apiKey =
-        params.apiKey?.trim() || process.env.RIOT_API_KEY?.trim() || "";
-
-      if (!apiKey) {
-        return {
-          success: false,
-          error:
-            "Missing Riot API key. Set RIOT_API_KEY in .env or enter one in Settings.",
-        };
-      }
-      if (!gameName || !tagLine) {
-        return { success: false, error: "Missing Riot ID (gameName#tagLine)." };
-      }
-
-      try {
-        const data = await getSummonerBundle(
-          platform,
-          gameName,
-          tagLine,
-          apiKey,
-          matchCount ?? 5,
-        );
-        return { success: true, data };
-      } catch (err: unknown) {
-        const message = getErrorMessage(err);
-        const status = getErrorStatus(err);
-        console.error("Riot API error:", message);
-        return { success: false, error: message, status };
       }
     },
   );

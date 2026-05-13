@@ -26,29 +26,26 @@ function getErrorMessage(error: unknown) {
 type UseSummonerOptions = {
   matchCount?: number;
   refreshKey?: number;
-  hasEnvKey?: boolean;
 };
 
 /**
- * Fetches the Riot summoner bundle (profile, rank, recent matches).
- * Re-fetches when Riot settings, matchCount, or `refreshKey` change.
- * When `hasEnvKey` is true, the renderer may skip sending an api key and
- * the main process will fall back to `process.env.RIOT_API_KEY`.
+ * Fetches the Riot summoner bundle (profile, rank, recent matches)
+ * from the Crux backend via HTTP.
  */
 export function useSummoner(
   settings: RiotSettings,
   options: UseSummonerOptions = {},
 ) {
-  const { matchCount = 10, refreshKey = 0, hasEnvKey = false } = options;
+  const { matchCount = 10, refreshKey = 0 } = options;
   const [state, setState] = useState<State>(INITIAL_STATE);
   const requestIdRef = useRef(0);
+  const backendUrl = settings.backendUrl.replace(/\/+$/, "");
   const platform = settings.platform;
   const gameName = settings.gameName.trim();
   const tagLine = settings.tagLine.replace(/^#/, "").trim();
-  const apiKey = settings.apiKey.trim();
 
   const fetchBundle = useCallback(async () => {
-    if (!(apiKey || hasEnvKey) || !gameName || !tagLine) {
+    if (!gameName || !tagLine) {
       setState(INITIAL_STATE);
       return;
     }
@@ -57,19 +54,20 @@ export function useSummoner(
     setState((prev) => ({ ...prev, status: "loading", error: null }));
 
     try {
-      const result = await window.electronAPI.getRiotSummoner({
-        platform,
-        gameName,
-        tagLine,
-        apiKey: apiKey || undefined,
-        matchCount,
-      });
+      const url = `${backendUrl}/api/summoner/${encodeURIComponent(platform)}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}?matchCount=${matchCount}`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+      const result = await response.json() as {
+        success: boolean;
+        data?: RiotProfileBundle;
+        error?: string;
+        status?: number;
+      };
 
       if (reqId !== requestIdRef.current) {
         return;
       }
 
-      if (result.success) {
+      if (result.success && result.data) {
         setState({
           status: "success",
           data: result.data,
@@ -80,7 +78,7 @@ export function useSummoner(
         setState({
           status: "error",
           data: null,
-          error: result.error,
+          error: result.error ?? "Unknown error",
           lastFetchedAt: Date.now(),
         });
       }
@@ -93,7 +91,7 @@ export function useSummoner(
         lastFetchedAt: Date.now(),
       });
     }
-  }, [apiKey, gameName, hasEnvKey, matchCount, platform, tagLine]);
+  }, [backendUrl, gameName, matchCount, platform, tagLine]);
 
   useEffect(() => {
     void fetchBundle();

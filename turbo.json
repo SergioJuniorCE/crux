@@ -1,0 +1,26 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": []
+    },
+    "build": {
+      "dependsOn": [],
+      "outputs": ["dist/**", "dist-electron/**"]
+    },
+    "lint": {
+      "dependsOn": []
+    },
+    "clean": {
+      "dependsOn": [],
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

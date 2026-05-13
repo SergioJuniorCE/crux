@@ -1,0 +1,20 @@
+# Environment
+.env
+
+# Data (SQLite database files)
+data/
+
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db

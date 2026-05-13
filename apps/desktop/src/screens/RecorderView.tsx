@@ -7,6 +7,7 @@ import {
   Monitor,
   Power,
   Save,
+  Square,
 } from "lucide-react";
 
 import type { RecorderSettings, RecordingState } from "../types/recorder";
@@ -30,6 +31,7 @@ type RecorderViewProps = {
   summonerConfigured: boolean;
   onRefreshSummoner: () => void;
   onOpenRiotSettings: () => void;
+  onStopRecording: () => void;
 };
 
 function formatTimer(seconds: number) {
@@ -70,6 +72,7 @@ export function RecorderView({
   summonerConfigured,
   onRefreshSummoner,
   onOpenRiotSettings,
+  onStopRecording,
 }: RecorderViewProps) {
   const isRecording = recordingState === "recording";
   const isSaving = recordingState === "saving";
@@ -186,6 +189,15 @@ export function RecorderView({
             <span className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               {recordingState === "idle" ? "standby" : recordingState}
             </span>
+            {isRecording && (
+              <button
+                onClick={onStopRecording}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-500 active:bg-red-700"
+              >
+                <Square size={10} fill="currentColor" />
+                Stop Recording
+              </button>
+            )}
           </div>
         </div>
       </section>
